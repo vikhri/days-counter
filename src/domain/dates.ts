@@ -28,3 +28,7 @@ export function addMonths(date: CalendarDate, months: number): CalendarDate {
   target.setUTCDate(Math.min(d, lastDay))
   return target.toISOString().slice(0, 10)
 }
+
+export function isCalendarDate(value: unknown): value is CalendarDate {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && fromDayNumber(toDayNumber(value)) === value
+}
