@@ -1,5 +1,5 @@
 import { toDayNumber } from '../domain/dates'
-import type { CalendarDate, CountryCode, Stay } from '../domain/types'
+import type { CalendarDate, CountryCode, DateRange, Stay } from '../domain/types'
 import type { StayError, StayWarning } from '../domain/validation'
 
 const regionNames = new Intl.DisplayNames(['ru'], { type: 'region' })
@@ -17,10 +17,15 @@ export function formatDate(date: CalendarDate): string {
   return fullDate.format(asDate(date))
 }
 
+/** «3–10 мая 2026 г.»; для одного дня — просто дата. */
+export function formatDateRange(range: DateRange): string {
+  return range.start === range.end ? formatDate(range.start) : fullDate.formatRange(asDate(range.start), asDate(range.end))
+}
+
 /** «3–10 мая 2026 г.» или «с 1 сентября 2026 г. по сегодня». */
 export function formatStayDates(stay: Stay): string {
   if (stay.exit === null) return `с ${formatDate(stay.entry)} по сегодня`
-  return fullDate.formatRange(asDate(stay.entry), asDate(stay.exit))
+  return formatDateRange({ start: stay.entry, end: stay.exit })
 }
 
 export function formatDays(n: number): string {
