@@ -55,28 +55,6 @@ async function setVisible(key: keyof Settings, event: Event) {
 
 <template>
   <section class="dashboard">
-    <header
-      v-if="stays.length"
-      class="head"
-    >
-      <button
-        type="button"
-        class="secondary icon-btn"
-        :aria-pressed="editing"
-        :aria-label="editing ? 'Готово' : 'Настроить'"
-        :title="editing ? 'Готово' : 'Настроить'"
-        @click="editing = !editing"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-        </svg>
-      </button>
-    </header>
-
     <p
       v-if="!stays.length"
       class="card muted"
@@ -218,6 +196,25 @@ async function setVisible(key: keyof Settings, event: Event) {
           Осталось {{ formatDays(schengen.left) }} в окне последних 180 дней
         </p>
       </div>
+
+      <div class="settings-row">
+        <button
+          type="button"
+          class="icon-btn"
+          :aria-pressed="editing"
+          :aria-label="editing ? 'Готово' : 'Настроить'"
+          :title="editing ? 'Готово' : 'Настроить'"
+          @click="editing = !editing"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+          </svg>
+        </button>
+      </div>
     </template>
   </section>
 </template>
@@ -228,27 +225,33 @@ async function setVisible(key: keyof Settings, event: Event) {
   gap: 16px;
 }
 
-.head {
+.settings-row {
   display: flex;
   justify-content: flex-end;
 }
 
 .icon-btn {
   display: flex;
-  width: 40px;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
   align-items: center;
   justify-content: center;
   padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.5;
 }
 
 .icon-btn[aria-pressed='true'] {
-  border-color: var(--accent);
   color: var(--accent);
+  opacity: 1;
 }
 
 .icon-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
