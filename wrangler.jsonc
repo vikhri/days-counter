@@ -11,7 +11,7 @@
     {
       "binding": "DB",
       "database_name": "days-counter",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "e803c3cc-12d0-472e-b51a-ab38d34e6b83",
       "migrations_dir": "migrations"
     }
   ]
