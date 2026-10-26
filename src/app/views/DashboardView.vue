@@ -55,15 +55,25 @@ async function setVisible(key: keyof Settings, event: Event) {
 
 <template>
   <section class="dashboard">
-    <header class="head">
-      <h1>Дашборд</h1>
+    <header
+      v-if="stays.length"
+      class="head"
+    >
       <button
-        v-if="stays.length"
         type="button"
-        class="secondary"
+        class="secondary icon-btn"
+        :aria-pressed="editing"
+        :aria-label="editing ? 'Готово' : 'Настроить'"
+        :title="editing ? 'Готово' : 'Настроить'"
         @click="editing = !editing"
       >
-        {{ editing ? 'Готово' : 'Настроить' }}
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+        </svg>
       </button>
     </header>
 
@@ -220,9 +230,30 @@ async function setVisible(key: keyof Settings, event: Event) {
 
 .head {
   display: flex;
-  gap: 12px;
+  justify-content: flex-end;
+}
+
+.icon-btn {
+  display: flex;
+  width: 40px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  padding: 0;
+}
+
+.icon-btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .card.hidden {

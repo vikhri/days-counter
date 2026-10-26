@@ -54,8 +54,6 @@ const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && s
 
 <template>
   <section class="stays">
-    <h1>Пребывания</h1>
-
     <p
       v-if="actionError"
       class="error"

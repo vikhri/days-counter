@@ -103,25 +103,27 @@ watch([customStart, customEnd], ([start, end]) => {
 }
 
 .custom {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  align-items: end;
 }
 
 .custom .error {
+  grid-column: 1 / -1;
   margin: 0;
-  align-self: center;
 }
 
 .field {
   display: grid;
   gap: 4px;
+  min-width: 0;
   font-size: 0.85rem;
   color: var(--muted);
 }
 
 .field input {
+  width: 100%;
+  min-width: 0;
   font-size: 1rem;
 }
 </style>
