@@ -68,19 +68,34 @@ app.delete('/stays/:id', async (c) => {
   return meta.changes ? c.body(null, 204) : c.json({ error: 'not found' }, 404)
 })
 
-app.get('/settings', async (c) => {
-  const row = await c.env.DB.prepare("SELECT value FROM settings WHERE key = 'schengen'").first<{ value: string }>()
-  return c.json({ schengen: row?.value !== 'false' })
-})
+/** Видимость карточек дашборда; список стран виден всегда. */
+const CARD_DEFAULTS = { showSchengen: false, showRussia: true }
+type Settings = typeof CARD_DEFAULTS
+const SETTING_KEYS = Object.keys(CARD_DEFAULTS) as (keyof Settings)[]
 
+async function readSettings(db: D1Database): Promise<Settings> {
+  const { results } = await db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()
+  const settings = { ...CARD_DEFAULTS }
+  for (const { key, value } of results) {
+    if ((SETTING_KEYS as string[]).includes(key)) settings[key as keyof Settings] = value === 'true'
+  }
+  return settings
+}
+
+app.get('/settings', async (c) => c.json(await readSettings(c.env.DB)))
+
+/** Принимает любую часть настроек, возвращает их целиком. */
 app.put('/settings', async (c) => {
-  const body = await c.req.json().catch(() => null)
-  if (typeof body?.schengen !== 'boolean') return c.json({ error: 'invalid' }, 400)
+  const body: unknown = await c.req.json().catch(() => null)
+  if (typeof body !== 'object' || body === null) return c.json({ error: 'invalid' }, 400)
+  const updates = SETTING_KEYS.filter((key) => key in body)
+  if (!updates.length || updates.some((key) => typeof (body as Record<string, unknown>)[key] !== 'boolean')) {
+    return c.json({ error: 'invalid' }, 400)
+  }
 
-  await c.env.DB.prepare("INSERT INTO settings (key, value) VALUES ('schengen', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-    .bind(String(body.schengen))
-    .run()
-  return c.json({ schengen: body.schengen })
+  const upsert = c.env.DB.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+  await c.env.DB.batch(updates.map((key) => upsert.bind(key, String((body as Settings)[key]))))
+  return c.json(await readSettings(c.env.DB))
 })
 
 export default app

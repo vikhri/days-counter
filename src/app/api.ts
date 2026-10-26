@@ -5,8 +5,10 @@ import { localToday } from './today'
 
 export type StayInput = Omit<Stay, 'id'>
 
+/** Видимость карточек дашборда. */
 export interface Settings {
-  schengen: boolean
+  showSchengen: boolean
+  showRussia: boolean
 }
 
 export class ValidationFailed extends Error {
@@ -35,5 +37,5 @@ export const api = {
   updateStay: (id: string, input: StayInput) => request<Stay>('PUT', `/stays/${id}`, input),
   deleteStay: (id: string) => request<void>('DELETE', `/stays/${id}`),
   getSettings: () => request<Settings>('GET', '/settings'),
-  putSettings: (settings: Settings) => request<Settings>('PUT', '/settings', settings),
+  putSettings: (settings: Partial<Settings>) => request<Settings>('PUT', '/settings', settings),
 }

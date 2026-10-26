@@ -9,28 +9,55 @@ function stay(country: string, entry: string, exit: string | null): Stay {
 }
 
 describe('russiaStatus', () => {
-  it('reports the current year, the last 12 months and the previous year separately', () => {
-    const stays = [
-      stay('RU', '2025-07-01', '2026-02-15'),
-      stay('FR', '2026-02-15', '2026-03-01'),
-      stay('RU', '2026-03-01', '2026-05-31'),
-    ]
+  it('reports days in Russia since January 1 and how many more are allowed', () => {
+    const stays = [stay('RU', '2025-12-01', '2026-06-30'), stay('FR', '2026-06-30', '2026-07-10')]
 
     expect(russiaStatus(stays, TODAY)).toEqual({
-      currentYear: { year: 2026, days: 138, resident: false },
-      today: { days: 204, resident: true },
-      previousYear: { year: 2025, days: 184, resident: true },
+      year: 2026,
+      days: 181,
+      allowance: 1,
+      resident: false,
+      unreachable: false,
+      planned: null,
     })
   })
 
-  it('exactly 183 days make a resident, 182 do not', () => {
-    expect(russiaStatus([stay('RU', '2025-07-02', '2025-12-31')], TODAY).previousYear).toEqual({ year: 2025, days: 183, resident: true })
-    expect(russiaStatus([stay('RU', '2025-07-03', '2025-12-31')], TODAY).previousYear).toEqual({ year: 2025, days: 182, resident: false })
+  it('has no allowance left at 182 days and makes a resident at 183', () => {
+    const at182 = russiaStatus([stay('RU', '2026-01-01', '2026-07-01')], TODAY)
+    const at183 = russiaStatus([stay('RU', '2026-01-01', '2026-07-02')], TODAY)
+
+    expect(at182).toMatchObject({ days: 182, allowance: 0, resident: false })
+    expect(at183).toMatchObject({ days: 183, allowance: 0, resident: true })
   })
 
-  it('does not count planned future days in the current year', () => {
-    const status = russiaStatus([stay('RU', '2026-01-01', '2026-12-31')], TODAY)
+  it('is unreachable when even the rest of the year in Russia would not make 183 days', () => {
+    // до 31 декабря после сегодня осталось 66 дней
+    const at116 = russiaStatus([stay('RU', '2026-01-01', '2026-04-26')], TODAY)
+    const at117 = russiaStatus([stay('RU', '2026-01-01', '2026-04-27')], TODAY)
 
-    expect(status.currentYear).toEqual({ year: 2026, days: 299, resident: true })
+    expect(at116).toMatchObject({ days: 116, unreachable: true })
+    expect(at117).toMatchObject({ days: 117, unreachable: false })
+  })
+
+  describe('planned trips to Russia this year', () => {
+    const before = stay('RU', '2026-01-01', '2026-06-20') // 171 день, запас 11
+
+    it('reduce the allowance by the planned days', () => {
+      const status = russiaStatus([before, stay('RU', '2026-12-01', '2026-12-10')], TODAY)
+
+      expect(status).toMatchObject({ days: 171, allowance: 11, planned: { allowance: 1, resident: false } })
+    })
+
+    it('show that the plan crosses the threshold', () => {
+      const status = russiaStatus([before, stay('RU', '2026-12-01', '2026-12-20')], TODAY)
+
+      expect(status.planned).toEqual({ allowance: 0, resident: true })
+    })
+
+    it('count only up to December 31', () => {
+      const status = russiaStatus([before, stay('RU', '2026-12-25', '2027-01-10')], TODAY)
+
+      expect(status.planned).toEqual({ allowance: 4, resident: false })
+    })
   })
 })

@@ -8,6 +8,7 @@
   --accent-text: #ffffff;
   --danger: #c53030;
   --warning: #9a5b00;
+  --success: #1f7a3d;
   --warning-bg: #fff3d6;
 
   color-scheme: light dark;
@@ -26,6 +27,7 @@
     --accent-text: #0d1117;
     --danger: #ff7b72;
     --warning: #f0b44c;
+    --success: #5cc97b;
     --warning-bg: #3a2e14;
   }
 }
@@ -113,4 +115,8 @@ button:disabled {
 
 .warning {
   color: var(--warning);
+}
+
+.success {
+  color: var(--success);
 }

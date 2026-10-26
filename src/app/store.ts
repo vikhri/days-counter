@@ -3,7 +3,7 @@ import type { Stay } from '../domain/types'
 import { api, type Settings, type StayInput } from './api'
 
 const stays = ref<Stay[]>([])
-const settings = ref<Settings>({ schengen: true })
+const settings = ref<Settings>({ showSchengen: false, showRussia: true })
 const loaded = ref(false)
 const loadError = ref('')
 
@@ -33,10 +33,10 @@ async function deleteStay(id: string) {
   stays.value = stays.value.filter((s) => s.id !== id)
 }
 
-async function setSchengen(schengen: boolean) {
-  settings.value = await api.putSettings({ schengen })
+async function updateSettings(changes: Partial<Settings>) {
+  settings.value = await api.putSettings(changes)
 }
 
 export function useData() {
-  return { stays, settings, loaded, loadError, reload, createStay, updateStay, deleteStay, setSchengen }
+  return { stays, settings, loaded, loadError, reload, createStay, updateStay, deleteStay, updateSettings }
 }

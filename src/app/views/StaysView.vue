@@ -8,7 +8,7 @@ import { countryName, formatDays, formatStayDates, stayErrorText, stayLength } f
 import { useData } from '../store'
 import { localToday } from '../today'
 
-const { stays, settings, createStay, updateStay, deleteStay, setSchengen } = useData()
+const { stays, createStay, updateStay, deleteStay } = useData()
 const today = localToday()
 
 /** Открытое — первым, остальные по въезду, новые сверху. */
@@ -49,27 +49,12 @@ async function remove(stay: Stay) {
   }
 }
 
-function toggleSchengen(event: Event) {
-  run(() => setSchengen((event.target as HTMLInputElement).checked))
-}
-
 const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && stay.exit > today)
 </script>
 
 <template>
   <section class="stays">
-    <header class="head">
-      <h1>Пребывания</h1>
-      <label class="check">
-        <input
-          type="checkbox"
-          :checked="settings.schengen"
-          :disabled="busy"
-          @change="toggleSchengen"
-        >
-        Считать Шенген 90/180
-      </label>
-    </header>
+    <h1>Пребывания</h1>
 
     <p
       v-if="actionError"
@@ -164,19 +149,6 @@ const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && s
   gap: 16px;
 }
 
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.check {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
 
 h2 {
   margin: 0 0 10px;

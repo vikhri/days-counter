@@ -1,38 +1,50 @@
-import { yearOf } from './dates'
-import { calendarYear, last12Months } from './periods'
+import { addDays, toDayNumber, yearOf } from './dates'
 import { countPresenceDays } from './presence'
 import type { CalendarDate, Stay } from './types'
 
-/** НК РФ ст. 207 п. 2: не менее 183 календарных дней в течение 12 следующих подряд месяцев. */
+/** НК РФ ст. 207 п. 2: не менее 183 календарных дней — резидент. */
 export const RESIDENCY_THRESHOLD = 183
 
-export interface ResidencyCount {
-  days: number
+export interface PlannedAllowance {
+  allowance: number
   resident: boolean
 }
 
 export interface RussiaStatus {
-  /** С 1 января по сегодня; статус за год окончателен только после 31 декабря. */
-  currentYear: ResidencyCount & { year: number }
-  /** Промежуточный статус: последние 12 месяцев по сегодня. */
-  today: ResidencyCount
-  /** Статус за прошлый год — окончательный. */
-  previousYear: ResidencyCount & { year: number }
+  year: number
+  /** Дни в России с 1 января по сегодня. */
+  days: number
+  /** Запас дней: сколько ещё можно провести в России в этом году, не став резидентом. */
+  allowance: number
+  resident: boolean
+  /** До конца года порог уже не набрать. */
+  unreachable: boolean
+  /** Запас с учётом будущих дней в России до 31 декабря; null — таких дней нет. */
+  planned: PlannedAllowance | null
 }
 
+/** 183-й день делает резидентом, поэтому запас — до 182 включительно. */
+const allowanceFor = (days: number) => Math.max(0, RESIDENCY_THRESHOLD - 1 - days)
+
+/** Всё — только за текущий календарный год: цель пользователя — не стать резидентом. */
 export function russiaStatus(stays: Stay[], today: CalendarDate): RussiaStatus {
   const inRussia = stays.filter((s) => s.country === 'RU')
-  const count = (start: CalendarDate, end: CalendarDate): ResidencyCount => {
-    const days = countPresenceDays(inRussia, { start, end }, today)
-    return { days, resident: days >= RESIDENCY_THRESHOLD }
-  }
-
   const year = yearOf(today)
-  const window = last12Months(today)
-  const previous = calendarYear(year - 1)
+  const days = countPresenceDays(inRussia, { start: `${year}-01-01`, end: today }, today)
+  const daysLeftInYear = toDayNumber(`${year}-12-31`) - toDayNumber(today)
+  const resident = days >= RESIDENCY_THRESHOLD
+  const plannedDays = daysLeftInYear
+    ? countPresenceDays(inRussia, { start: addDays(today, 1), end: `${year}-12-31` }, today)
+    : 0
+
   return {
-    currentYear: { year, ...count(`${year}-01-01`, today) },
-    today: count(window.start, window.end),
-    previousYear: { year: year - 1, ...count(previous.start, previous.end) },
+    year,
+    days,
+    allowance: allowanceFor(days),
+    resident,
+    unreachable: !resident && days + daysLeftInYear < RESIDENCY_THRESHOLD,
+    planned: plannedDays
+      ? { allowance: allowanceFor(days + plannedDays), resident: days + plannedDays >= RESIDENCY_THRESHOLD }
+      : null,
   }
 }

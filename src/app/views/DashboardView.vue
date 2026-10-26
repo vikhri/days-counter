@@ -3,16 +3,22 @@ import { computed, ref } from 'vue'
 import { countDays, type PeriodChoice } from '../../domain/counting'
 import { RESIDENCY_THRESHOLD, russiaStatus } from '../../domain/russia'
 import { SCHENGEN_LIMIT, schengenStatus } from '../../domain/schengen'
+import type { Settings } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import PeriodPicker from '../components/PeriodPicker.vue'
 import { countryName, formatDateRange, formatDays } from '../format'
 import { useData } from '../store'
 import { localToday } from '../today'
 
-const { stays, settings } = useData()
+/** С какого запаса подсказка становится жёлтой. */
+const LOW_ALLOWANCE = 30
+
+const { stays, settings, updateSettings } = useData()
 const today = localToday()
 
 const period = ref<PeriodChoice>({ kind: 'currentYear' })
+const editing = ref(false)
+const settingsError = ref('')
 
 const count = computed(() => countDays(stays.value, period.value, today))
 const schengen = computed(() => schengenStatus(stays.value, today))
@@ -20,11 +26,46 @@ const russia = computed(() => russiaStatus(stays.value, today))
 
 const schengenOver = computed(() => schengen.value.used - SCHENGEN_LIMIT)
 const schengenShare = computed(() => `${Math.min(100, (schengen.value.used / SCHENGEN_LIMIT) * 100)}%`)
+
+const russiaHint = computed(() => {
+  const { year, resident, unreachable, allowance } = russia.value
+  if (resident) return { text: `Порог превышен: вы резидент РФ за ${year} год`, tone: 'error' }
+  if (unreachable) return { text: `До конца года ${RESIDENCY_THRESHOLD} дня уже не набрать — за ${year} год вы точно не резидент`, tone: 'success' }
+  if (allowance === 0) return { text: 'Больше нельзя: следующий день в России сделает вас резидентом', tone: 'error' }
+  return { text: `Можно провести в России ещё ${formatDays(allowance)}`, tone: allowance <= LOW_ALLOWANCE ? 'warning' : '' }
+})
+
+const plannedHint = computed(() => {
+  const { resident, unreachable, planned } = russia.value
+  if (!planned || resident || unreachable) return null
+  return planned.resident
+    ? { text: 'С учётом запланированных поездок порог будет превышен', tone: 'error' }
+    : { text: `С учётом запланированных поездок — ещё ${formatDays(planned.allowance)}`, tone: 'muted' }
+})
+
+async function setVisible(key: keyof Settings, event: Event) {
+  settingsError.value = ''
+  try {
+    await updateSettings({ [key]: (event.target as HTMLInputElement).checked })
+  } catch (e) {
+    settingsError.value = e instanceof Error ? e.message : String(e)
+  }
+}
 </script>
 
 <template>
   <section class="dashboard">
-    <h1>Дашборд</h1>
+    <header class="head">
+      <h1>Дашборд</h1>
+      <button
+        v-if="stays.length"
+        type="button"
+        class="secondary"
+        @click="editing = !editing"
+      >
+        {{ editing ? 'Готово' : 'Настроить' }}
+      </button>
+    </header>
 
     <p
       v-if="!stays.length"
@@ -37,73 +78,13 @@ const schengenShare = computed(() => `${Math.min(100, (schengen.value.used / SCH
     </p>
 
     <template v-else>
-      <div
-        v-if="settings.schengen"
-        class="card"
+      <p
+        v-if="settingsError"
+        class="error"
+        role="alert"
       >
-        <h2>Шенген 90/180</h2>
-        <p class="big">
-          {{ schengen.used }} <span class="muted">из {{ SCHENGEN_LIMIT }}</span>
-        </p>
-        <div
-          class="bar"
-          :class="{ over: schengenOver > 0 }"
-        >
-          <div
-            class="bar-fill"
-            :style="{ width: schengenShare }"
-          />
-        </div>
-        <p
-          v-if="schengenOver > 0"
-          class="error"
-        >
-          Превышено на {{ formatDays(schengenOver) }}
-        </p>
-        <p
-          v-else
-          class="muted"
-        >
-          Осталось {{ formatDays(schengen.left) }} в окне последних 180 дней
-        </p>
-      </div>
-
-      <div class="card">
-        <h2>Резидентство РФ</h2>
-        <dl class="residency">
-          <dt>За {{ russia.currentYear.year }} год</dt>
-          <dd>
-            {{ russia.currentYear.days }} из {{ RESIDENCY_THRESHOLD }}
-            <span
-              v-if="russia.currentYear.resident"
-              class="status yes"
-            >резидент за {{ russia.currentYear.year }}</span>
-            <span
-              v-else
-              class="status"
-            >статус определится 31 декабря</span>
-          </dd>
-
-          <dt>На сегодня, за 12 месяцев</dt>
-          <dd>
-            {{ russia.today.days }} из {{ RESIDENCY_THRESHOLD }}
-            <span :class="['status', { yes: russia.today.resident }]">
-              {{ russia.today.resident ? 'резидент' : 'нерезидент' }}
-            </span>
-          </dd>
-
-          <dt>За {{ russia.previousYear.year }} год</dt>
-          <dd>
-            {{ russia.previousYear.days }} из {{ RESIDENCY_THRESHOLD }}
-            <span :class="['status', { yes: russia.previousYear.resident }]">
-              {{ russia.previousYear.resident ? 'резидент' : 'нерезидент' }}
-            </span>
-          </dd>
-        </dl>
-        <p class="footnote muted">
-          Выезды на лечение и обучение не учтены.
-        </p>
-      </div>
+        Не удалось сохранить настройку: {{ settingsError }}
+      </p>
 
       <div class="card">
         <PeriodPicker
@@ -148,6 +129,85 @@ const schengenShare = computed(() => `${Math.min(100, (schengen.value.used / SCH
           Не указано: {{ formatDays(count.unspecifiedDays) }}
         </p>
       </div>
+
+      <div
+        v-if="settings.showRussia || editing"
+        :class="['card', { hidden: !settings.showRussia }]"
+      >
+        <div class="card-head">
+          <h2>Резидентство РФ за {{ russia.year }} год</h2>
+          <label
+            v-if="editing"
+            class="toggle"
+          >
+            <input
+              type="checkbox"
+              :checked="settings.showRussia"
+              @change="setVisible('showRussia', $event)"
+            >
+            Показывать
+          </label>
+        </div>
+        <p class="big">
+          {{ russia.days }} <span class="muted">из {{ RESIDENCY_THRESHOLD }}</span>
+        </p>
+        <p :class="russiaHint.tone">
+          {{ russiaHint.text }}
+        </p>
+        <p
+          v-if="plannedHint"
+          :class="plannedHint.tone"
+        >
+          {{ plannedHint.text }}
+        </p>
+        <p class="footnote muted">
+          Выезды на лечение и обучение не учтены.
+        </p>
+      </div>
+
+      <div
+        v-if="settings.showSchengen || editing"
+        :class="['card', { hidden: !settings.showSchengen }]"
+      >
+        <div class="card-head">
+          <h2>Шенген 90/180</h2>
+          <label
+            v-if="editing"
+            class="toggle"
+          >
+            <input
+              type="checkbox"
+              :checked="settings.showSchengen"
+              @change="setVisible('showSchengen', $event)"
+            >
+            Показывать
+          </label>
+        </div>
+        <p class="big">
+          {{ schengen.used }} <span class="muted">из {{ SCHENGEN_LIMIT }}</span>
+        </p>
+        <div
+          class="bar"
+          :class="{ over: schengenOver > 0 }"
+        >
+          <div
+            class="bar-fill"
+            :style="{ width: schengenShare }"
+          />
+        </div>
+        <p
+          v-if="schengenOver > 0"
+          class="error"
+        >
+          Превышено на {{ formatDays(schengenOver) }}
+        </p>
+        <p
+          v-else
+          class="muted"
+        >
+          Осталось {{ formatDays(schengen.left) }} в окне последних 180 дней
+        </p>
+      </div>
     </template>
   </section>
 </template>
@@ -158,9 +218,35 @@ const schengenShare = computed(() => `${Math.min(100, (schengen.value.used / SCH
   gap: 16px;
 }
 
+.head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card.hidden {
+  opacity: 0.5;
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 h2 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 1rem;
+}
+
+.toggle {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .card p {
@@ -193,32 +279,6 @@ h2 {
 
 .bar.over .bar-fill {
   background: var(--danger);
-}
-
-.residency {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 16px;
-  margin: 0;
-}
-
-.residency dt {
-  color: var(--muted);
-}
-
-.residency dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.status {
-  margin-left: 6px;
-  color: var(--muted);
-}
-
-.status.yes {
-  color: var(--text);
-  font-weight: 600;
 }
 
 .footnote {
@@ -267,16 +327,5 @@ h2 {
 .unspecified {
   padding-top: 8px;
   border-top: 1px solid var(--border);
-}
-
-@media (max-width: 480px) {
-  .residency {
-    grid-template-columns: 1fr;
-    gap: 2px;
-  }
-
-  .residency dd {
-    margin-bottom: 8px;
-  }
 }
 </style>
