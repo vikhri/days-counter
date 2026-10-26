@@ -4,6 +4,7 @@ import type { StayError, StayWarning } from '../domain/validation'
 
 const regionNames = new Intl.DisplayNames(['ru'], { type: 'region' })
 const fullDate = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+const shortDate = new Intl.DateTimeFormat('ru', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
 const plural = new Intl.PluralRules('ru')
 const DAY_WORDS: Record<string, string> = { one: 'день', few: 'дня', many: 'дней', other: 'дня' }
 
@@ -26,6 +27,13 @@ export function formatDateRange(range: DateRange): string {
 export function formatStayDates(stay: Stay): string {
   if (stay.exit === null) return `с ${formatDate(stay.entry)} по сегодня`
   return formatDateRange({ start: stay.entry, end: stay.exit })
+}
+
+/** «03.05.2026 – 10.05.2026» или «с 01.09.2026 по сегодня». */
+export function formatShortStayDates(stay: Stay): string {
+  const entry = shortDate.format(asDate(stay.entry))
+  if (stay.exit === null) return `с ${entry} по сегодня`
+  return stay.exit === stay.entry ? entry : `${entry} – ${shortDate.format(asDate(stay.exit))}`
 }
 
 export function formatDays(n: number): string {

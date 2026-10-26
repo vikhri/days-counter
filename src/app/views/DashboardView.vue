@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { countDays, type PeriodChoice } from '../../domain/counting'
+import { toDayNumber } from '../../domain/dates'
 import { RESIDENCY_THRESHOLD, russiaStatus } from '../../domain/russia'
 import { SCHENGEN_LIMIT, schengenStatus } from '../../domain/schengen'
 import type { Settings } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import PeriodPicker from '../components/PeriodPicker.vue'
-import { countryName, formatDateRange, formatDays } from '../format'
+import { countryName, formatDateRange, formatDays, formatShortStayDates } from '../format'
 import { useData } from '../store'
 import { localToday } from '../today'
 
@@ -19,8 +20,27 @@ const today = localToday()
 const period = ref<PeriodChoice>({ kind: 'currentYear' })
 const editing = ref(false)
 const settingsError = ref('')
+const openCountry = ref<string | null>(null)
 
 const count = computed(() => countDays(stays.value, period.value, today))
+
+function toggleCountry(code: string) {
+  openCountry.value = openCountry.value === code ? null : code
+}
+
+function visitsIn(code: string) {
+  const { start, end } = count.value.range
+  const from = toDayNumber(start)
+  const to = toDayNumber(end)
+  return stays.value
+    .filter((s) => s.country === code && s.entry <= end && (s.exit ?? today) >= start)
+    .sort((a, b) => a.entry.localeCompare(b.entry))
+    .map((stay) => {
+      const first = Math.max(toDayNumber(stay.entry), from)
+      const last = Math.min(toDayNumber(stay.exit ?? today), to)
+      return { stay, days: last - first + 1 }
+    })
+}
 const schengen = computed(() => schengenStatus(stays.value, today))
 const russia = computed(() => russiaStatus(stays.value, today))
 
@@ -98,15 +118,38 @@ async function setVisible(key: keyof Settings, event: Event) {
             :key="c.country"
             class="country"
           >
-            <CountryFlag :code="c.country" />
-            <span class="name">{{ countryName(c.country) }}</span>
-            <span class="days">
-              {{ formatDays(c.days) }}
+            <button
+              type="button"
+              class="country-head"
+              :aria-expanded="openCountry === c.country"
+              @click="toggleCountry(c.country)"
+            >
+              <CountryFlag :code="c.country" />
+              <span class="name">{{ countryName(c.country) }}</span>
+              <span class="days">
+                {{ formatDays(c.days) }}
+                <span
+                  v-if="c.futureDays"
+                  class="future"
+                >включая {{ c.futureDays }} будущих</span>
+              </span>
               <span
-                v-if="c.futureDays"
-                class="future"
-              >включая {{ c.futureDays }} будущих</span>
-            </span>
+                class="chevron"
+                :class="{ open: openCountry === c.country }"
+                aria-hidden="true"
+              />
+            </button>
+            <ul
+              v-if="openCountry === c.country"
+              class="visits"
+            >
+              <li
+                v-for="visit in visitsIn(c.country)"
+                :key="visit.stay.id"
+              >
+                {{ formatShortStayDates(visit.stay) }} · {{ formatDays(visit.days) }}
+              </li>
+            </ul>
           </li>
         </ul>
 
@@ -333,11 +376,45 @@ h2 {
 }
 
 .country {
+  border-top: 1px solid var(--border);
+}
+
+.country-head {
   display: flex;
+  width: 100%;
+  min-height: 0;
   gap: 10px;
   align-items: center;
   padding: 8px 0;
-  border-top: 1px solid var(--border);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.chevron {
+  width: 6px;
+  height: 6px;
+  margin-left: 2px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.chevron.open {
+  transform: rotate(45deg);
+}
+
+.visits {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0 0 8px 34px;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 .name {

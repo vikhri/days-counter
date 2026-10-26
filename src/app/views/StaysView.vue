@@ -50,6 +50,32 @@ async function remove(stay: Stay) {
 }
 
 const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && stay.exit > today)
+
+const filterCountry = ref('')
+const filterFrom = ref('')
+const filterTo = ref('')
+
+const countryOptions = computed(() =>
+  [...new Set(stays.value.map((s) => s.country))].sort((a, b) => countryName(a).localeCompare(countryName(b), 'ru')),
+)
+
+const hasFilter = computed(() => Boolean(filterCountry.value || filterFrom.value || filterTo.value))
+
+/** Пребывание попадает в период, если пересекается с ним; открытое тянется до сегодня. */
+const filtered = computed(() =>
+  sorted.value.filter(
+    (stay) =>
+      (!filterCountry.value || stay.country === filterCountry.value) &&
+      (!filterFrom.value || (stay.exit ?? today) >= filterFrom.value) &&
+      (!filterTo.value || stay.entry <= filterTo.value),
+  ),
+)
+
+function resetFilter() {
+  filterCountry.value = ''
+  filterFrom.value = ''
+  filterTo.value = ''
+}
 </script>
 
 <template>
@@ -74,6 +100,48 @@ const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && s
       />
     </div>
 
+    <div
+      v-if="stays.length"
+      class="card filter"
+    >
+      <select
+        v-model="filterCountry"
+        class="country-filter"
+        aria-label="Страна"
+      >
+        <option value="">
+          Все страны
+        </option>
+        <option
+          v-for="code in countryOptions"
+          :key="code"
+          :value="code"
+        >
+          {{ countryName(code) }}
+        </option>
+      </select>
+      <div class="dates">
+        <input
+          v-model="filterFrom"
+          type="date"
+          aria-label="Дата с"
+        >
+        <input
+          v-model="filterTo"
+          type="date"
+          aria-label="Дата по"
+        >
+      </div>
+      <button
+        v-if="hasFilter"
+        type="button"
+        class="secondary"
+        @click="resetFilter"
+      >
+        Сбросить
+      </button>
+    </div>
+
     <p
       v-if="!sorted.length"
       class="muted"
@@ -81,12 +149,19 @@ const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && s
       Пока нет ни одного пребывания.
     </p>
 
+    <p
+      v-else-if="!filtered.length"
+      class="muted"
+    >
+      По фильтру ничего не найдено.
+    </p>
+
     <ul
       v-else
       class="list"
     >
       <li
-        v-for="stay in sorted"
+        v-for="stay in filtered"
         :key="stay.id"
         class="card"
       >
@@ -151,6 +226,36 @@ const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && s
 h2 {
   margin: 0 0 10px;
   font-size: 1rem;
+}
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.country-filter {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.dates {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.dates input {
+  width: 8.5rem;
+  min-width: 0;
 }
 
 .list {
