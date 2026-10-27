@@ -1,35 +1,40 @@
+/* Светлая тема из дизайна «Дни по странам» (Claude Design). Тёмной пока нет — приложение всегда светлое. */
 :root {
-  --bg: #f6f7f9;
+  --bg: #f2f3f7;
   --surface: #ffffff;
-  --text: #1c1f24;
-  --muted: #646b75;
-  --border: #dde1e6;
+  --text: #101218;
+  --muted: #5e6372;
+  --faint: #9aa0ac;
+  --separator: rgba(16, 18, 24, 0.1);
+  --fill: rgba(118, 118, 128, 0.12);
   --accent: #2f6fed;
+  --accent-soft: rgba(47, 111, 237, 0.11);
   --accent-text: #ffffff;
-  --danger: #c53030;
-  --warning: #9a5b00;
-  --success: #1f7a3d;
-  --warning-bg: #fff3d6;
+  --danger: #e5484d;
+  --warning: #f2a60c;
+  --warning-bg: #fff2d6;
+  --warning-text: #8a5a00;
+  --success: #1f9d61;
+  --success-text: #17804e;
 
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Цвета стран на графиках. */
+  --country-ru: var(--accent);
+  --country-fr: #8b5cf6;
+  --country-es: #f08a24;
+
+  --bar: rgba(249, 249, 251, 0.88);
+  --swipe-edit: #8e93a0;
+  --toast-bg: #1c1e24;
+  --toast-text: #ffffff;
+  --toast-accent: #8fb0ff;
+
+  --font-ui: 'Onest Variable', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-num: 'Unbounded Variable', var(--font-ui);
+
+  color-scheme: light;
+  font-family: var(--font-ui);
   line-height: 1.4;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15171b;
-    --surface: #1e2126;
-    --text: #e6e8eb;
-    --muted: #9aa1ab;
-    --border: #33373e;
-    --accent: #6d9bff;
-    --accent-text: #0d1117;
-    --danger: #ff7b72;
-    --warning: #f0b44c;
-    --success: #5cc97b;
-    --warning-bg: #3a2e14;
-  }
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -61,8 +66,8 @@ button {
 
 input:not([type='checkbox']) {
   padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text);
 }
@@ -84,22 +89,22 @@ input:disabled {
 button {
   padding: 6px 14px;
   border: 1px solid var(--accent);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--accent);
   color: var(--accent-text);
   cursor: pointer;
 }
 
 button.secondary {
-  background: transparent;
+  background: var(--fill);
   color: var(--text);
-  border-color: var(--border);
+  border-color: transparent;
 }
 
 button.danger {
-  background: transparent;
+  background: var(--fill);
   color: var(--danger);
-  border-color: var(--border);
+  border-color: transparent;
 }
 
 button:disabled {
@@ -108,9 +113,8 @@ button:disabled {
 }
 
 .card {
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 16px;
+  border-radius: 20px;
   background: var(--surface);
 }
 
@@ -124,9 +128,9 @@ button:disabled {
 }
 
 .warning {
-  color: var(--warning);
+  color: var(--warning-text);
 }
 
 .success {
-  color: var(--success);
+  color: var(--success-text);
 }

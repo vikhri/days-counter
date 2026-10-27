@@ -138,8 +138,10 @@ main {
   max-width: 760px;
   margin: 0 auto;
   padding-bottom: env(safe-area-inset-bottom);
-  border-top: 1px solid var(--border);
-  background: var(--surface);
+  border-top: 0.5px solid var(--separator);
+  background: var(--bar);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   transition: transform 0.2s ease;
 }
 
@@ -160,7 +162,7 @@ main {
   align-items: center;
   justify-content: center;
   height: 56px;
-  color: var(--muted);
+  color: var(--faint);
   text-decoration: none;
 }
 

@@ -90,7 +90,7 @@ watch([customStart, customEnd], ([start, end]) => {
 .option {
   min-height: 36px;
   padding: 4px 12px;
-  border-color: var(--border);
+  border-color: var(--separator);
   border-radius: 999px;
   background: transparent;
   color: var(--text);

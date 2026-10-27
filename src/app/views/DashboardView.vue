@@ -331,21 +331,25 @@ h2 {
 }
 
 .big {
+  font-family: var(--font-num);
   font-size: 2rem;
   font-weight: 600;
+  letter-spacing: -0.03em;
   line-height: 1.2;
 }
 
 .big .muted {
+  font-family: var(--font-ui);
   font-size: 1rem;
   font-weight: 400;
+  letter-spacing: normal;
 }
 
 .bar {
   height: 8px;
   margin: 8px 0;
   border-radius: 999px;
-  background: var(--border);
+  background: var(--fill);
   overflow: hidden;
 }
 
@@ -376,7 +380,7 @@ h2 {
 }
 
 .country {
-  border-top: 1px solid var(--border);
+  border-top: 0.5px solid var(--separator);
 }
 
 .country-head {
@@ -397,8 +401,8 @@ h2 {
   width: 6px;
   height: 6px;
   margin-left: 2px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
+  border-right: 2px solid var(--faint);
+  border-bottom: 2px solid var(--faint);
   transform: rotate(-45deg);
   transition: transform 0.15s;
 }
@@ -432,11 +436,11 @@ h2 {
   display: block;
   font-size: 0.8rem;
   font-weight: 400;
-  color: var(--warning);
+  color: var(--warning-text);
 }
 
 .unspecified {
   padding-top: 8px;
-  border-top: 1px solid var(--border);
+  border-top: 0.5px solid var(--separator);
 }
 </style>

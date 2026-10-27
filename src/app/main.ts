@@ -1,3 +1,5 @@
+import '@fontsource-variable/onest'
+import '@fontsource-variable/unbounded'
 import 'flag-icons/css/flag-icons.min.css'
 import './style.css'
 import { createApp } from 'vue'

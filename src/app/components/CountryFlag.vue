@@ -15,6 +15,6 @@ defineProps<{ code: string }>()
   width: 1.5em;
   line-height: 1.125em;
   border-radius: 2px;
-  box-shadow: 0 0 0 1px var(--border);
+  box-shadow: 0 0 0 0.5px var(--separator);
 }
 </style>

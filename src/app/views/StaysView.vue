@@ -322,8 +322,8 @@ h2 {
   min-width: 0;
   min-height: 40px;
   padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -369,7 +369,7 @@ h2 {
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--warning-bg);
-  color: var(--warning);
+  color: var(--warning-text);
   font-size: 0.75rem;
   font-weight: 500;
 }
