@@ -9,6 +9,7 @@ import type { Settings } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import PeriodPicker from '../components/PeriodPicker.vue'
 import ScreenHeader from '../components/ScreenHeader.vue'
+import YearBar from '../components/YearBar.vue'
 import { countryColor } from '../countryColors'
 import {
   countryName,
@@ -293,6 +294,11 @@ async function setVisible(key: keyof Settings, event: Event) {
           </RouterLink>
         </div>
       </div>
+
+      <YearBar
+        :stays="stays"
+        :today="today"
+      />
 
       <section>
         <h2 class="section-label">
