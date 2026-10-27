@@ -46,6 +46,11 @@ export function formatShortRange(start: CalendarDate, end: CalendarDate, withYea
   return `${formatShortDate(start, years)} – ${formatShortDate(end, years)}`
 }
 
+/** «3 – 10 мая» или «с 1 сен» для открытого. */
+export function formatShortStay(stay: Stay, withYear = false): string {
+  return stay.exit === null ? `с ${formatShortDate(stay.entry, withYear)}` : formatShortRange(stay.entry, stay.exit, withYear)
+}
+
 /** «3–10 мая 2026 г.» или «с 1 сентября 2026 г. по сегодня». */
 export function formatStayDates(stay: Stay): string {
   if (stay.exit === null) return `с ${formatDate(stay.entry)} по сегодня`

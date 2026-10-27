@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { accessKey } from './accessKey'
 import KeyGate from './components/KeyGate.vue'
+import UndoToast from './components/UndoToast.vue'
 import { useData } from './store'
 
 const { loaded, loadError, reload } = useData()
@@ -73,6 +74,7 @@ watch(
       </p>
       <RouterView v-else />
     </main>
+    <UndoToast />
     <nav
       class="toolbar"
       :class="{ hidden: toolbarHidden }"

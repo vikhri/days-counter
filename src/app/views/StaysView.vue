@@ -8,11 +8,12 @@ import { ValidationFailed, type StayInput } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import ScreenHeader from '../components/ScreenHeader.vue'
 import StaySheet from '../components/StaySheet.vue'
-import { countryName, formatDays, formatShortDate, formatShortRange, formatStayDates, stayErrorText, stayLength } from '../format'
+import SwipeRow from '../components/SwipeRow.vue'
+import { countryName, formatDays, formatShortStay, stayErrorText, stayLength } from '../format'
 import { useData } from '../store'
 import { localToday } from '../today'
 
-const { stays, createStay, updateStay, deleteStay } = useData()
+const { stays, createStay, updateStay, deleteWithUndo } = useData()
 const today = localToday()
 
 /** Даты из ссылки «Заполнить» на Обзоре: шторка добавления открывается с ними. */
@@ -63,10 +64,18 @@ async function submit(input: StayInput) {
   if (await run(() => (id ? updateStay(id, input) : createStay(input)))) sheet.value?.close()
 }
 
-async function removeEditing() {
-  const stay = editing.value
-  if (!stay || !window.confirm(`Удалить пребывание: ${countryName(stay.country)}, ${formatStayDates(stay)}?`)) return
-  if (await run(() => deleteStay(stay.id))) sheet.value?.close()
+/** Строка с открытым свайпом; открытой может быть только одна. */
+const swipedId = ref<string | null>(null)
+
+function setSwiped(id: string, open: boolean) {
+  if (open) swipedId.value = id
+  else if (swipedId.value === id) swipedId.value = null
+}
+
+function removeEditing() {
+  if (!editing.value) return
+  deleteWithUndo(editing.value)
+  sheet.value?.close()
 }
 
 const filterOpen = ref(false)
@@ -110,8 +119,7 @@ function groupTitle(group: StayGroup) {
 
 /** «3 – 10 мая»; год — когда его не видно из группы. Открытое — «с 1 сен». */
 function stayDates(stay: Stay, group: StayGroup) {
-  const withYear = group.kind !== 'year' && yearOf(stay.entry) !== yearOf(today)
-  return stay.exit === null ? `с ${formatShortDate(stay.entry, withYear)}` : formatShortRange(stay.entry, stay.exit, withYear)
+  return formatShortStay(stay, group.kind !== 'year' && yearOf(stay.entry) !== yearOf(today))
 }
 
 /** Сколько дней пребывания, которое идёт сейчас, уже прошло и сколько осталось. */
@@ -271,65 +279,74 @@ function progress(stay: Stay) {
           v-for="stay in group.stays"
           :key="stay.id"
         >
-          <button
-            type="button"
-            class="row"
-            aria-haspopup="dialog"
-            @click="openSheet(stay)"
+          <SwipeRow
+            :open="swipedId === stay.id"
+            @update:open="setSwiped(stay.id, $event)"
+            @edit="openSheet(stay)"
+            @delete="deleteWithUndo(stay)"
           >
-            <CountryFlag
-              :code="stay.country"
-              :size="36"
-            />
-            <span class="info">
-              <span class="name">
-                <span class="name-text">{{ countryName(stay.country) }}</span>
-                <span
-                  v-if="group.kind === 'now'"
-                  class="tag here"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" />
-                    <circle
-                      cx="12"
-                      cy="9.5"
-                      r="2.5"
-                    />
-                  </svg>
-                  Вы здесь
+            <div class="item">
+              <button
+                type="button"
+                class="row"
+                aria-haspopup="dialog"
+                @click="openSheet(stay)"
+              >
+                <CountryFlag
+                  :code="stay.country"
+                  :size="36"
+                />
+                <span class="info">
+                  <span class="name">
+                    <span class="name-text">{{ countryName(stay.country) }}</span>
+                    <span
+                      v-if="group.kind === 'now'"
+                      class="tag here"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" />
+                        <circle
+                          cx="12"
+                          cy="9.5"
+                          r="2.5"
+                        />
+                      </svg>
+                      Вы здесь
+                    </span>
+                    <span
+                      v-else-if="group.kind === 'planned'"
+                      class="tag plan"
+                    >план</span>
+                  </span>
+                  <span class="dates">{{ stayDates(stay, group) }}</span>
                 </span>
                 <span
-                  v-else-if="group.kind === 'planned'"
-                  class="tag plan"
-                >план</span>
-              </span>
-              <span class="dates">{{ stayDates(stay, group) }}</span>
-            </span>
-            <span
-              v-if="group.kind === 'now'"
-              class="right"
-            >
-              <span class="days">
-                {{ progress(stay).passed }}
-                <span class="unit">{{ progress(stay).total ? `из ${progress(stay).total}` : 'дн' }}</span>
-              </span>
-              <span class="left">{{ progress(stay).left === null ? 'по сегодня' : `ещё ${formatDays(progress(stay).left ?? 0)}` }}</span>
-            </span>
-            <span
-              v-else
-              class="days"
-            >{{ stayLength(stay, today) }} <span class="unit">дн</span></span>
-          </button>
-          <div
-            v-if="group.kind === 'now' && progress(stay).share"
-            class="progress"
-            aria-hidden="true"
-          >
-            <span :style="{ width: progress(stay).share ?? undefined }" />
-          </div>
+                  v-if="group.kind === 'now'"
+                  class="right"
+                >
+                  <span class="days">
+                    {{ progress(stay).passed }}
+                    <span class="unit">{{ progress(stay).total ? `из ${progress(stay).total}` : 'дн' }}</span>
+                  </span>
+                  <span class="left">{{ progress(stay).left === null ? 'по сегодня' : `ещё ${formatDays(progress(stay).left ?? 0)}` }}</span>
+                </span>
+                <span
+                  v-else
+                  class="days"
+                >{{ stayLength(stay, today) }} <span class="unit">дн</span></span>
+              </button>
+              <div
+                v-if="group.kind === 'now' && progress(stay).share"
+                class="progress"
+                aria-hidden="true"
+              >
+                <span :style="{ width: progress(stay).share ?? undefined }" />
+              </div>
+            </div>
+          </SwipeRow>
         </li>
       </ul>
     </section>
@@ -438,13 +455,18 @@ function progress(stay: Stay) {
 
 .list {
   margin: 0;
-  padding: 0 16px;
+  padding: 0;
+  overflow: hidden;
   list-style: none;
 }
 
-/* Разделитель начинается от текста, как в нативных списках. */
-.list li + li {
-  box-shadow: inset 48px 0 0 var(--surface), inset 0 0.5px 0 var(--separator);
+.item {
+  padding: 0 16px;
+}
+
+/* Разделитель начинается от текста, как в нативных списках, и уезжает вместе со строкой. */
+.list li + li .item {
+  background: linear-gradient(var(--separator), var(--separator)) 64px 0 / calc(100% - 64px) 0.5px no-repeat;
 }
 
 .row {
