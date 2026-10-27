@@ -67,7 +67,7 @@ export function stayErrorText(error: StayError): string {
     case 'exitBeforeEntry':
       return 'Дата выезда раньше даты въезда'
     case 'openStayInFuture':
-      return 'Въезд в будущем не может быть «сейчас здесь» — укажите дату выезда'
+      return 'Въезд в будущем не может быть «Я ещё там» — укажите дату выезда'
     case 'secondOpenStay':
       return `Уже есть открытое пребывание: ${countryName(error.with.country)}, ${formatStayDates(error.with)}. Сначала закройте его датой выезда`
     case 'overlap':
@@ -80,6 +80,6 @@ export function stayErrorText(error: StayError): string {
 export function stayWarningText(warning: StayWarning): string {
   switch (warning.code) {
     case 'futureDates':
-      return 'Даты в будущем — это план, в текущих итогах не учитывается'
+      return 'Даты в будущем — сохранится как план'
   }
 }

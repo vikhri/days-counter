@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isCalendarDate } from '../../domain/dates'
 import type { CalendarDate, Stay } from '../../domain/types'
@@ -7,6 +7,7 @@ import { ValidationFailed, type StayInput } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import ScreenHeader from '../components/ScreenHeader.vue'
 import StayForm from '../components/StayForm.vue'
+import StaySheet from '../components/StaySheet.vue'
 import { countryName, formatDays, formatStayDates, stayErrorText, stayLength } from '../format'
 import { useData } from '../store'
 import { localToday } from '../today'
@@ -28,29 +29,19 @@ function draftFromQuery(): { entry: CalendarDate; exit: CalendarDate } | undefin
 const draft = ref(draftFromQuery())
 if (draft.value) void useRouter().replace({ query: {} })
 
-const addFormKey = ref(0)
-const addOpen = ref(Boolean(draft.value))
-/** Пока пребываний нет, форма открыта сразу — добавить первое больше негде. */
-const showAddForm = computed(() => addOpen.value || !stays.value.length)
-const addCard = ref<HTMLElement | null>(null)
+const sheetOpen = ref(Boolean(draft.value))
+const sheet = ref<InstanceType<typeof StaySheet> | null>(null)
 
-function focusAddForm() {
-  addCard.value?.querySelector('input')?.focus()
+function openSheet() {
+  actionError.value = ''
+  sheetOpen.value = true
 }
 
-async function toggleAdd() {
-  addOpen.value = !addOpen.value
-  if (!addOpen.value) {
-    draft.value = undefined
-    return
-  }
-  await nextTick()
-  focusAddForm()
+function closeSheet() {
+  sheetOpen.value = false
+  draft.value = undefined
+  actionError.value = ''
 }
-
-onMounted(() => {
-  if (draft.value) focusAddForm()
-})
 
 const editingId = ref<string | null>(null)
 const busy = ref(false)
@@ -71,11 +62,7 @@ async function run(action: () => Promise<void>): Promise<boolean> {
 }
 
 async function add(input: StayInput) {
-  if (await run(() => createStay(input))) {
-    addFormKey.value++
-    addOpen.value = false
-    draft.value = undefined
-  }
+  if (await run(() => createStay(input))) sheet.value?.close()
 }
 
 async function save(id: string, input: StayInput) {
@@ -122,14 +109,12 @@ function resetFilter() {
   <section class="stays">
     <ScreenHeader title="Поездки">
       <button
-        v-if="stays.length"
         type="button"
         class="accent"
-        :aria-expanded="addOpen"
-        aria-controls="add-stay"
-        :aria-label="addOpen ? 'Закрыть добавление' : 'Добавить пребывание'"
-        :title="addOpen ? 'Закрыть добавление' : 'Добавить пребывание'"
-        @click="toggleAdd"
+        aria-haspopup="dialog"
+        aria-label="Новая поездка"
+        title="Новая поездка"
+        @click="openSheet"
       >
         <svg
           viewBox="0 0 24 24"
@@ -141,30 +126,24 @@ function resetFilter() {
     </ScreenHeader>
 
     <p
-      v-if="actionError"
+      v-if="actionError && !sheetOpen"
       class="error"
       role="alert"
     >
       {{ actionError }}
     </p>
 
-    <div
-      v-if="showAddForm"
-      id="add-stay"
-      ref="addCard"
-      class="card"
-    >
-      <h2>Добавить</h2>
-      <StayForm
-        :key="addFormKey"
-        :draft="draft"
-        :stays="stays"
-        :today="today"
-        :busy="busy"
-        submit-label="Добавить"
-        @submit="add"
-      />
-    </div>
+    <StaySheet
+      v-if="sheetOpen"
+      ref="sheet"
+      :draft="draft"
+      :stays="stays"
+      :today="today"
+      :busy="busy"
+      :error="actionError"
+      @submit="add"
+      @close="closeSheet"
+    />
 
     <div
       v-if="stays.length"
@@ -235,12 +214,21 @@ function resetFilter() {
       </button>
     </div>
 
-    <p
+    <div
       v-if="!sorted.length"
-      class="muted"
+      class="card empty"
     >
-      Пока нет ни одного пребывания.
-    </p>
+      <p class="muted">
+        Пока нет ни одного пребывания.
+      </p>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        @click="openSheet"
+      >
+        Добавить первое
+      </button>
+    </div>
 
     <p
       v-else-if="!filtered.length"
@@ -319,6 +307,16 @@ function resetFilter() {
 h2 {
   margin: 0 0 10px;
   font-size: 1rem;
+}
+
+.empty {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.empty p {
+  margin: 0;
 }
 
 .filter-row {

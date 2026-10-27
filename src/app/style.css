@@ -32,6 +32,11 @@
   --segment: var(--surface);
   --segment-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
 
+  /* Нижняя шторка: фон, ячейки форм и затемнение под ней. */
+  --sheet: var(--bg);
+  --cell: var(--surface);
+  --scrim: rgba(16, 18, 24, 0.35);
+
   --bar: rgba(249, 249, 251, 0.88);
   --swipe-edit: #8e93a0;
   --toast-bg: #1c1e24;
@@ -49,6 +54,11 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Под открытой шторкой страница не прокручивается. */
+html.sheet-open {
+  overflow: hidden;
 }
 
 body {
