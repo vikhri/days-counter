@@ -80,8 +80,6 @@ watch(
       <RouterLink
         to="/"
         class="tab"
-        aria-label="Дашборд"
-        title="Дашборд"
       >
         <svg
           viewBox="0 0 24 24"
@@ -89,12 +87,11 @@ watch(
         >
           <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />
         </svg>
+        Обзор
       </RouterLink>
       <RouterLink
         to="/stays"
         class="tab"
-        aria-label="Пребывания"
-        title="Пребывания"
       >
         <svg
           viewBox="0 0 24 24"
@@ -117,6 +114,7 @@ watch(
             r="1.5"
           />
         </svg>
+        Поездки
       </RouterLink>
     </nav>
   </template>
@@ -159,10 +157,14 @@ main {
 .tab {
   display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 2px;
   align-items: center;
   justify-content: center;
   height: 56px;
   color: var(--faint);
+  font-size: 10px;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -171,8 +173,8 @@ main {
 }
 
 .tab svg {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;

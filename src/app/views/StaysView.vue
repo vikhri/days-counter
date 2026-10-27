@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import type { Stay } from '../../domain/types'
 import { ValidationFailed, type StayInput } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
+import ScreenHeader from '../components/ScreenHeader.vue'
 import StayForm from '../components/StayForm.vue'
 import { countryName, formatDays, formatStayDates, stayErrorText, stayLength } from '../format'
 import { useData } from '../store'
@@ -17,6 +18,18 @@ const sorted = computed(() =>
 )
 
 const addFormKey = ref(0)
+const addOpen = ref(false)
+/** Пока пребываний нет, форма открыта сразу — добавить первое больше негде. */
+const showAddForm = computed(() => addOpen.value || !stays.value.length)
+const addCard = ref<HTMLElement | null>(null)
+
+async function toggleAdd() {
+  addOpen.value = !addOpen.value
+  if (!addOpen.value) return
+  await nextTick()
+  addCard.value?.querySelector('input')?.focus()
+}
+
 const editingId = ref<string | null>(null)
 const busy = ref(false)
 const actionError = ref('')
@@ -36,7 +49,10 @@ async function run(action: () => Promise<void>): Promise<boolean> {
 }
 
 async function add(input: StayInput) {
-  if (await run(() => createStay(input))) addFormKey.value++
+  if (await run(() => createStay(input))) {
+    addFormKey.value++
+    addOpen.value = false
+  }
 }
 
 async function save(id: string, input: StayInput) {
@@ -81,6 +97,26 @@ function resetFilter() {
 
 <template>
   <section class="stays">
+    <ScreenHeader title="Поездки">
+      <button
+        v-if="stays.length"
+        type="button"
+        class="accent"
+        :aria-expanded="addOpen"
+        aria-controls="add-stay"
+        :aria-label="addOpen ? 'Закрыть добавление' : 'Добавить пребывание'"
+        :title="addOpen ? 'Закрыть добавление' : 'Добавить пребывание'"
+        @click="toggleAdd"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+    </ScreenHeader>
+
     <p
       v-if="actionError"
       class="error"
@@ -89,7 +125,12 @@ function resetFilter() {
       {{ actionError }}
     </p>
 
-    <div class="card">
+    <div
+      v-if="showAddForm"
+      id="add-stay"
+      ref="addCard"
+      class="card"
+    >
       <h2>Добавить</h2>
       <StayForm
         :key="addFormKey"

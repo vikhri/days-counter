@@ -7,6 +7,7 @@ import { SCHENGEN_LIMIT, schengenStatus } from '../../domain/schengen'
 import type { Settings } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import PeriodPicker from '../components/PeriodPicker.vue'
+import ScreenHeader from '../components/ScreenHeader.vue'
 import { countryName, formatDateRange, formatDays, formatShortStayDates } from '../format'
 import { useData } from '../store'
 import { localToday } from '../today'
@@ -75,6 +76,25 @@ async function setVisible(key: keyof Settings, event: Event) {
 
 <template>
   <section class="dashboard">
+    <ScreenHeader title="Обзор">
+      <button
+        v-if="stays.length"
+        type="button"
+        :aria-pressed="editing"
+        :aria-label="editing ? 'Готово' : 'Настроить карточки'"
+        :title="editing ? 'Готово' : 'Настроить карточки'"
+        @click="editing = !editing"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+        </svg>
+      </button>
+    </ScreenHeader>
+
     <p
       v-if="!stays.length"
       class="card muted"
@@ -239,25 +259,6 @@ async function setVisible(key: keyof Settings, event: Event) {
           Осталось {{ formatDays(schengen.left) }} в окне последних 180 дней
         </p>
       </div>
-
-      <div class="settings-row">
-        <button
-          type="button"
-          class="icon-btn"
-          :aria-pressed="editing"
-          :aria-label="editing ? 'Готово' : 'Настроить'"
-          :title="editing ? 'Готово' : 'Настроить'"
-          @click="editing = !editing"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-          </svg>
-        </button>
-      </div>
     </template>
   </section>
 </template>
@@ -266,40 +267,6 @@ async function setVisible(key: keyof Settings, event: Event) {
 .dashboard {
   display: grid;
   gap: 16px;
-}
-
-.settings-row {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.icon-btn {
-  display: flex;
-  width: 28px;
-  height: 28px;
-  min-height: 0;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  opacity: 0.5;
-}
-
-.icon-btn[aria-pressed='true'] {
-  color: var(--accent);
-  opacity: 1;
-}
-
-.icon-btn svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .card.hidden {
