@@ -2,12 +2,14 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isCalendarDate, toDayNumber, yearOf } from '../../domain/dates'
+import { filterStays, type DateFilter } from '../../domain/stayFilter'
 import { groupStays, type StayGroup } from '../../domain/stayGroups'
-import type { CalendarDate, Stay } from '../../domain/types'
+import type { CalendarDate, CountryCode, Stay } from '../../domain/types'
 import { ValidationFailed, type StayInput } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import ScreenHeader from '../components/ScreenHeader.vue'
 import StaySheet from '../components/StaySheet.vue'
+import StaysFilter from '../components/StaysFilter.vue'
 import SwipeRow from '../components/SwipeRow.vue'
 import { countryName, formatDays, formatShortStay, stayErrorText, stayLength } from '../format'
 import { useData } from '../store'
@@ -78,34 +80,14 @@ function removeEditing() {
   sheet.value?.close()
 }
 
-const filterOpen = ref(false)
-const filterCountry = ref('')
-const filterFrom = ref('')
-const filterTo = ref('')
+const filterCountry = ref<CountryCode | null>(null)
+const filterDates = ref<DateFilter>({ kind: 'any' })
 
-const countryOptions = computed(() =>
-  [...new Set(stays.value.map((s) => s.country))].sort((a, b) => countryName(a).localeCompare(countryName(b), 'ru')),
+const stayCountries = computed(() => [...new Set(stays.value.map((s) => s.country))])
+
+const groups = computed(() =>
+  groupStays(filterStays(stays.value, { country: filterCountry.value, dates: filterDates.value }, today), today),
 )
-
-const hasFilter = computed(() => Boolean(filterCountry.value || filterFrom.value || filterTo.value))
-
-/** Пребывание попадает в период, если пересекается с ним; открытое тянется до сегодня. */
-const filtered = computed(() =>
-  stays.value.filter(
-    (stay) =>
-      (!filterCountry.value || stay.country === filterCountry.value) &&
-      (!filterFrom.value || (stay.exit ?? today) >= filterFrom.value) &&
-      (!filterTo.value || stay.entry <= filterTo.value),
-  ),
-)
-
-function resetFilter() {
-  filterCountry.value = ''
-  filterFrom.value = ''
-  filterTo.value = ''
-}
-
-const groups = computed(() => groupStays(filtered.value, today))
 
 function groupKey(group: StayGroup) {
   return group.kind === 'year' ? String(group.year) : group.kind
@@ -174,74 +156,13 @@ function progress(stay: Stay) {
       @close="closeSheet"
     />
 
-    <div
+    <StaysFilter
       v-if="stays.length"
-      class="filter-row"
-    >
-      <button
-        type="button"
-        class="icon-btn"
-        :class="{ active: hasFilter }"
-        :aria-expanded="filterOpen"
-        aria-controls="stays-filter"
-        aria-label="Фильтр"
-        title="Фильтр"
-        @click="filterOpen = !filterOpen"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M3 4h18l-7 8.5V19l-4 2v-8.5z" />
-        </svg>
-      </button>
-    </div>
-
-    <div
-      v-if="stays.length && filterOpen"
-      id="stays-filter"
-      class="card filter"
-    >
-      <label class="field country-filter">
-        Страна
-        <select v-model="filterCountry">
-          <option value="">
-            Все страны
-          </option>
-          <option
-            v-for="code in countryOptions"
-            :key="code"
-            :value="code"
-          >
-            {{ countryName(code) }}
-          </option>
-        </select>
-      </label>
-      <div class="dates">
-        <label class="field">
-          С даты
-          <input
-            v-model="filterFrom"
-            type="date"
-          >
-        </label>
-        <label class="field">
-          По дату
-          <input
-            v-model="filterTo"
-            type="date"
-          >
-        </label>
-      </div>
-      <button
-        v-if="hasFilter"
-        type="button"
-        class="secondary"
-        @click="resetFilter"
-      >
-        Сбросить
-      </button>
-    </div>
+      v-model:country="filterCountry"
+      v-model:dates="filterDates"
+      :countries="stayCountries"
+      :today="today"
+    />
 
     <div
       v-if="!stays.length"
@@ -367,90 +288,6 @@ function progress(stay: Stay) {
 
 .empty p {
   margin: 0;
-}
-
-.filter-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -8px;
-}
-
-.icon-btn {
-  display: flex;
-  width: 36px;
-  height: 36px;
-  min-height: 0;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-}
-
-.icon-btn[aria-expanded='true'],
-.icon-btn.active {
-  color: var(--accent);
-}
-
-.icon-btn.active svg {
-  fill: currentColor;
-}
-
-.icon-btn svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: end;
-}
-
-.field {
-  display: grid;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.field input,
-.field select {
-  font-size: 1rem;
-}
-
-.country-filter {
-  flex: 1 1 160px;
-  min-width: 0;
-}
-
-.country-filter select {
-  min-width: 0;
-  min-height: 40px;
-  padding: 6px 10px;
-  border: 1px solid var(--separator);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-}
-
-.dates input {
-  width: 8.5rem;
-  min-width: 0;
-}
-
-.filter .dates {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 10px;
 }
 
 .list {
