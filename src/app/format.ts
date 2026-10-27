@@ -1,4 +1,4 @@
-import { toDayNumber } from '../domain/dates'
+import { toDayNumber, yearOf } from '../domain/dates'
 import type { CalendarDate, CountryCode, DateRange, Stay } from '../domain/types'
 import type { StayError, StayWarning } from '../domain/validation'
 
@@ -35,6 +35,15 @@ export function formatShortDate(date: CalendarDate, withYear = false): string {
 /** «3–10 мая 2026 г.»; для одного дня — просто дата. */
 export function formatDateRange(range: DateRange): string {
   return range.start === range.end ? formatDate(range.start) : fullDate.formatRange(asDate(range.start), asDate(range.end))
+}
+
+/** «3 – 10 мая», «28 фев – 5 мар»; через границу года — с годами у обеих дат. */
+export function formatShortRange(start: CalendarDate, end: CalendarDate, withYear = false): string {
+  const crossesYear = yearOf(start) !== yearOf(end)
+  const years = withYear || crossesYear
+  if (start === end) return formatShortDate(start, years)
+  if (start.slice(0, 7) === end.slice(0, 7)) return `${Number(start.slice(8))} – ${formatShortDate(end, years)}`
+  return `${formatShortDate(start, years)} – ${formatShortDate(end, years)}`
 }
 
 /** «3–10 мая 2026 г.» или «с 1 сентября 2026 г. по сегодня». */

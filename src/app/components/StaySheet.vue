@@ -19,7 +19,7 @@ const props = defineProps<{
   error?: string
 }>()
 
-const emit = defineEmits<{ submit: [input: StayInput]; close: [] }>()
+const emit = defineEmits<{ submit: [input: StayInput]; delete: []; close: [] }>()
 
 const titleId = useId()
 const title = props.stay ? 'Поездка' : 'Новая поездка'
@@ -315,6 +315,15 @@ function onDragEnd() {
           :disabled="!canSubmit"
         >
           {{ submitLabel }}
+        </button>
+        <button
+          v-if="stay"
+          type="button"
+          class="delete"
+          :disabled="busy"
+          @click="emit('delete')"
+        >
+          Удалить поездку
         </button>
       </div>
     </form>
@@ -663,6 +672,16 @@ function onDragEnd() {
 .actions {
   margin-top: auto;
   padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+}
+
+.delete {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  font-size: 17px;
 }
 
 .primary {

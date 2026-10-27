@@ -138,6 +138,19 @@ button:disabled {
   background: var(--surface);
 }
 
+/* Подпись секции капсом над белой карточкой. */
+.section-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 16px 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .muted,
 .hint {
   color: var(--muted);

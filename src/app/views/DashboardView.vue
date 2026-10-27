@@ -623,15 +623,6 @@ h2 {
   text-align: center;
 }
 
-.section-label {
-  margin: 0 0 6px 16px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .countries-card {
   padding: 14px 16px 0;
 }
