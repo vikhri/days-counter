@@ -24,6 +24,7 @@ const settingsError = ref('')
 const openCountry = ref<string | null>(null)
 
 const count = computed(() => countDays(stays.value, period.value, today))
+const periodDays = computed(() => toDayNumber(count.value.range.end) - toDayNumber(count.value.range.start) + 1)
 
 function toggleCountry(code: string) {
   openCountry.value = openCountry.value === code ? null : code
@@ -114,15 +115,17 @@ async function setVisible(key: keyof Settings, event: Event) {
         Не удалось сохранить настройку: {{ settingsError }}
       </p>
 
-      <div class="card">
+      <div class="period">
         <PeriodPicker
           v-model="period"
           :today="today"
         />
-        <p class="range muted">
-          {{ formatDateRange(count.range) }}
+        <p class="range">
+          {{ formatDateRange(count.range) }} · {{ formatDays(periodDays) }}
         </p>
+      </div>
 
+      <div class="card">
         <p
           v-if="!count.countries.length"
           class="muted"
@@ -334,9 +337,16 @@ h2 {
   font-size: 0.85rem;
 }
 
+.period {
+  display: grid;
+  gap: 8px;
+}
+
 .range {
-  margin: 10px 0 !important;
-  font-size: 0.9rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
 }
 
 .countries {
@@ -346,7 +356,7 @@ h2 {
   list-style: none;
 }
 
-.country {
+.country + .country {
   border-top: 0.5px solid var(--separator);
 }
 
