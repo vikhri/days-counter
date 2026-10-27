@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import type { Stay } from '../../domain/types'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { isCalendarDate } from '../../domain/dates'
+import type { CalendarDate, Stay } from '../../domain/types'
 import { ValidationFailed, type StayInput } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import ScreenHeader from '../components/ScreenHeader.vue'
@@ -17,18 +19,38 @@ const sorted = computed(() =>
   [...stays.value].sort((a, b) => Number(b.exit === null) - Number(a.exit === null) || b.entry.localeCompare(a.entry)),
 )
 
+/** Даты из ссылки «Заполнить» на Обзоре: форма добавления открывается с ними. */
+function draftFromQuery(): { entry: CalendarDate; exit: CalendarDate } | undefined {
+  const { entry, exit } = useRoute().query
+  return isCalendarDate(entry) && isCalendarDate(exit) && entry <= exit ? { entry, exit } : undefined
+}
+
+const draft = ref(draftFromQuery())
+if (draft.value) void useRouter().replace({ query: {} })
+
 const addFormKey = ref(0)
-const addOpen = ref(false)
+const addOpen = ref(Boolean(draft.value))
 /** Пока пребываний нет, форма открыта сразу — добавить первое больше негде. */
 const showAddForm = computed(() => addOpen.value || !stays.value.length)
 const addCard = ref<HTMLElement | null>(null)
 
-async function toggleAdd() {
-  addOpen.value = !addOpen.value
-  if (!addOpen.value) return
-  await nextTick()
+function focusAddForm() {
   addCard.value?.querySelector('input')?.focus()
 }
+
+async function toggleAdd() {
+  addOpen.value = !addOpen.value
+  if (!addOpen.value) {
+    draft.value = undefined
+    return
+  }
+  await nextTick()
+  focusAddForm()
+}
+
+onMounted(() => {
+  if (draft.value) focusAddForm()
+})
 
 const editingId = ref<string | null>(null)
 const busy = ref(false)
@@ -52,6 +74,7 @@ async function add(input: StayInput) {
   if (await run(() => createStay(input))) {
     addFormKey.value++
     addOpen.value = false
+    draft.value = undefined
   }
 }
 
@@ -134,6 +157,7 @@ function resetFilter() {
       <h2>Добавить</h2>
       <StayForm
         :key="addFormKey"
+        :draft="draft"
         :stays="stays"
         :today="today"
         :busy="busy"

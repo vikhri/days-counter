@@ -1,18 +1,26 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { countDays, type PeriodChoice } from '../../domain/counting'
-import { toDayNumber } from '../../domain/dates'
+import { toDayNumber, yearOf } from '../../domain/dates'
 import { RESIDENCY_THRESHOLD, russiaStatus } from '../../domain/russia'
 import { SCHENGEN_LIMIT, schengenStatus } from '../../domain/schengen'
 import type { Settings } from '../api'
 import CountryFlag from '../components/CountryFlag.vue'
 import PeriodPicker from '../components/PeriodPicker.vue'
 import ScreenHeader from '../components/ScreenHeader.vue'
-import { countryName, formatDateRange, formatDays, formatShortStayDates } from '../format'
+import {
+  countryName,
+  dayWord,
+  formatDateRange,
+  formatDayMonth,
+  formatDays,
+  formatShortDate,
+  formatShortStayDates,
+} from '../format'
 import { useData } from '../store'
 import { localToday } from '../today'
 
-/** С какого запаса подсказка становится жёлтой. */
+/** С какого запаса статус становится «Почти порог». */
 const LOW_ALLOWANCE = 30
 
 const { stays, settings, updateSettings } = useData()
@@ -49,20 +57,33 @@ const russia = computed(() => russiaStatus(stays.value, today))
 const schengenOver = computed(() => schengen.value.used - SCHENGEN_LIMIT)
 const schengenShare = computed(() => `${Math.min(100, (schengen.value.used / SCHENGEN_LIMIT) * 100)}%`)
 
-const russiaHint = computed(() => {
+/** Один статус карточки: бейдж и пояснение справа от «N из 183». */
+const residency = computed(() => {
   const { year, resident, unreachable, allowance } = russia.value
-  if (resident) return { text: `Порог превышен: вы резидент РФ за ${year} год`, tone: 'error' }
-  if (unreachable) return { text: `До конца года ${RESIDENCY_THRESHOLD} дня уже не набрать — за ${year} год вы точно не резидент`, tone: 'success' }
-  if (allowance === 0) return { text: 'Больше нельзя: следующий день в России сделает вас резидентом', tone: 'error' }
-  return { text: `Можно провести в России ещё ${formatDays(allowance)}`, tone: allowance <= LOW_ALLOWANCE ? 'warning' : '' }
+  if (resident) return { badge: 'Резидент', tone: 'danger', lead: 'порог превышен', note: `вы резидент РФ за ${year} год` }
+  if (unreachable) {
+    return { badge: 'Не резидент', tone: 'success', lead: `${RESIDENCY_THRESHOLD} уже не набрать`, note: `за ${year} год вы точно не резидент` }
+  }
+  if (allowance === 0) return { badge: 'На пороге', tone: 'danger', lead: 'больше нельзя', note: 'следующий день в России сделает вас резидентом' }
+  const low = allowance <= LOW_ALLOWANCE
+  return { badge: low ? 'Почти порог' : 'В норме', tone: low ? 'warning' : 'success', lead: `ещё ${formatDays(allowance)}`, note: 'можно провести в России' }
 })
 
-const plannedHint = computed(() => {
+const planLine = computed(() => {
   const { resident, unreachable, planned } = russia.value
   if (!planned || resident || unreachable) return null
+  const total = `${planned.days} из ${RESIDENCY_THRESHOLD} к ${formatDayMonth(planned.until)}`
   return planned.resident
-    ? { text: 'С учётом запланированных поездок порог будет превышен', tone: 'error' }
-    : { text: `С учётом запланированных поездок — ещё ${formatDays(planned.allowance)}`, tone: 'muted' }
+    ? { text: `С учётом планов порог будет превышен — ${total}`, over: true }
+    : { text: `С учётом планов запас — ещё ${formatDays(planned.allowance)}: ${total}`, over: false }
+})
+
+const gapText = computed(() => {
+  const gap = count.value.longestGap
+  if (!gap) return 'все дни периода заполнены'
+  const withYear = yearOf(gap.start) !== yearOf(gap.end) || yearOf(gap.end) !== yearOf(today)
+  const start = formatShortDate(gap.start, withYear)
+  return gap.start === gap.end ? `без поездок ${start}` : `без поездок с ${start} по ${formatShortDate(gap.end, withYear)}`
 })
 
 async function setVisible(key: keyof Settings, event: Event) {
@@ -125,6 +146,123 @@ async function setVisible(key: keyof Settings, event: Event) {
         </p>
       </div>
 
+      <div
+        v-if="settings.showRussia || editing"
+        :class="['card', 'residency', { hidden: !settings.showRussia }]"
+      >
+        <div class="card-head">
+          <h2>Резидентство РФ · {{ russia.year }}</h2>
+          <span
+            class="badge"
+            :class="residency.tone"
+          >
+            <span
+              class="dot"
+              aria-hidden="true"
+            />
+            {{ residency.badge }}
+          </span>
+        </div>
+        <label
+          v-if="editing"
+          class="toggle"
+        >
+          <input
+            type="checkbox"
+            :checked="settings.showRussia"
+            @change="setVisible('showRussia', $event)"
+          >
+          Показывать
+        </label>
+        <div class="residency-main">
+          <p class="big">
+            {{ russia.days }}<span class="of"> из {{ RESIDENCY_THRESHOLD }}</span>
+          </p>
+          <p class="lead">
+            <strong>{{ residency.lead }}</strong>
+            {{ residency.note }}
+          </p>
+        </div>
+        <p
+          v-if="planLine"
+          class="plan"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            :class="{ over: planLine.over }"
+            aria-hidden="true"
+          >
+            <path d="M12 3 2 20h20z" />
+            <path d="M12 10v4M12 17h.01" />
+          </svg>
+          {{ planLine.text }}
+        </p>
+        <p class="footnote muted">
+          Выезды на лечение и обучение не учтены.
+        </p>
+      </div>
+
+      <div class="tiles">
+        <div
+          v-if="settings.showSchengen || editing"
+          :class="['card', 'tile', { hidden: !settings.showSchengen }]"
+        >
+          <h2>Шенген 90/180</h2>
+          <label
+            v-if="editing"
+            class="toggle"
+          >
+            <input
+              type="checkbox"
+              :checked="settings.showSchengen"
+              @change="setVisible('showSchengen', $event)"
+            >
+            Показывать
+          </label>
+          <p class="mid">
+            {{ schengen.used }}<span class="of"> из {{ SCHENGEN_LIMIT }}</span>
+          </p>
+          <div
+            class="bar"
+            :class="{ over: schengenOver > 0 }"
+          >
+            <div
+              class="bar-fill"
+              :style="{ width: schengenShare }"
+            />
+          </div>
+          <p
+            v-if="schengenOver > 0"
+            class="note error"
+          >
+            Превышено на {{ formatDays(schengenOver) }}
+          </p>
+          <p
+            v-else
+            class="note muted"
+          >
+            Осталось {{ formatDays(schengen.left) }} в окне 180 дней
+          </p>
+        </div>
+
+        <div class="card tile">
+          <h2>Не указано</h2>
+          <p class="mid">
+            {{ count.unspecifiedDays }} <span class="of">{{ dayWord(count.unspecifiedDays) }}</span>
+          </p>
+          <p class="note muted">
+            {{ gapText }}
+          </p>
+          <RouterLink
+            v-if="count.longestGap"
+            class="fill-link"
+            :to="{ path: '/stays', query: { entry: count.longestGap.start, exit: count.longestGap.end } }"
+          >
+            Заполнить
+          </RouterLink>
+        </div>
+      </div>
+
       <div class="card">
         <p
           v-if="!count.countries.length"
@@ -183,85 +321,6 @@ async function setVisible(key: keyof Settings, event: Event) {
           Не указано: {{ formatDays(count.unspecifiedDays) }}
         </p>
       </div>
-
-      <div
-        v-if="settings.showRussia || editing"
-        :class="['card', { hidden: !settings.showRussia }]"
-      >
-        <div class="card-head">
-          <h2>Резидентство РФ за {{ russia.year }} год</h2>
-          <label
-            v-if="editing"
-            class="toggle"
-          >
-            <input
-              type="checkbox"
-              :checked="settings.showRussia"
-              @change="setVisible('showRussia', $event)"
-            >
-            Показывать
-          </label>
-        </div>
-        <p class="big">
-          {{ russia.days }} <span class="muted">из {{ RESIDENCY_THRESHOLD }}</span>
-        </p>
-        <p :class="russiaHint.tone">
-          {{ russiaHint.text }}
-        </p>
-        <p
-          v-if="plannedHint"
-          :class="plannedHint.tone"
-        >
-          {{ plannedHint.text }}
-        </p>
-        <p class="footnote muted">
-          Выезды на лечение и обучение не учтены.
-        </p>
-      </div>
-
-      <div
-        v-if="settings.showSchengen || editing"
-        :class="['card', { hidden: !settings.showSchengen }]"
-      >
-        <div class="card-head">
-          <h2>Шенген 90/180</h2>
-          <label
-            v-if="editing"
-            class="toggle"
-          >
-            <input
-              type="checkbox"
-              :checked="settings.showSchengen"
-              @change="setVisible('showSchengen', $event)"
-            >
-            Показывать
-          </label>
-        </div>
-        <p class="big">
-          {{ schengen.used }} <span class="muted">из {{ SCHENGEN_LIMIT }}</span>
-        </p>
-        <div
-          class="bar"
-          :class="{ over: schengenOver > 0 }"
-        >
-          <div
-            class="bar-fill"
-            :style="{ width: schengenShare }"
-          />
-        </div>
-        <p
-          v-if="schengenOver > 0"
-          class="error"
-        >
-          Превышено на {{ formatDays(schengenOver) }}
-        </p>
-        <p
-          v-else
-          class="muted"
-        >
-          Осталось {{ formatDays(schengen.left) }} в окне последних 180 дней
-        </p>
-      </div>
     </template>
   </section>
 </template>
@@ -300,24 +359,177 @@ h2 {
   margin: 0;
 }
 
-.big {
-  font-family: var(--font-num);
-  font-size: 2rem;
+.badge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fill);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.big .muted {
+.badge .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge.warning {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.badge.warning .dot {
+  background: var(--warning);
+}
+
+.badge.danger {
+  color: var(--danger);
+}
+
+.badge.success {
+  color: var(--success-text);
+}
+
+.badge.success .dot {
+  background: var(--success);
+}
+
+.residency h2 {
+  font-size: 15px;
+}
+
+.residency .card-head {
+  gap: 4px 8px;
+}
+
+.residency .toggle {
+  margin-bottom: 8px;
+}
+
+.residency-main {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.big,
+.mid {
+  font-family: var(--font-num);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.big {
+  font-size: 40px;
+}
+
+.mid {
+  margin: 4px 0 !important;
+  font-size: 26px;
+}
+
+.of {
+  color: var(--muted);
   font-family: var(--font-ui);
-  font-size: 1rem;
-  font-weight: 400;
+  font-size: 15px;
+  font-weight: 500;
   letter-spacing: normal;
 }
 
+.lead {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.lead strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.plan {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px !important;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--separator);
+  font-size: 14px;
+}
+
+.plan svg {
+  flex: 0 0 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--warning);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.plan svg.over {
+  stroke: var(--danger);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px;
+}
+
+/* Шенген скрыт — плитка «Не указано» одна и занимает весь ряд. */
+.tile:only-child {
+  grid-column: 1 / -1;
+}
+
+.tile h2 {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tile .toggle {
+  font-size: 13px;
+}
+
+.note {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.fill-link {
+  margin-top: auto;
+  padding-top: 8px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .bar {
-  height: 8px;
-  margin: 8px 0;
+  height: 6px;
+  margin: 6px 0 8px;
   border-radius: 999px;
   background: var(--fill);
   overflow: hidden;
@@ -334,7 +546,7 @@ h2 {
 
 .footnote {
   margin-top: 10px !important;
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
 .period {

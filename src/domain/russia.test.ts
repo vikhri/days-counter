@@ -45,19 +45,32 @@ describe('russiaStatus', () => {
     it('reduce the allowance by the planned days', () => {
       const status = russiaStatus([before, stay('RU', '2026-12-01', '2026-12-10')], TODAY)
 
-      expect(status).toMatchObject({ days: 171, allowance: 11, planned: { allowance: 1, resident: false } })
+      expect(status).toMatchObject({
+        days: 171,
+        allowance: 11,
+        planned: { days: 181, until: '2026-12-10', allowance: 1, resident: false },
+      })
     })
 
     it('show that the plan crosses the threshold', () => {
       const status = russiaStatus([before, stay('RU', '2026-12-01', '2026-12-20')], TODAY)
 
-      expect(status.planned).toEqual({ allowance: 0, resident: true })
+      expect(status.planned).toEqual({ days: 191, until: '2026-12-20', allowance: 0, resident: true })
+    })
+
+    it('are reached by the last planned day in Russia, not by the end of the plan elsewhere', () => {
+      const status = russiaStatus(
+        [before, stay('RU', '2026-11-01', '2026-11-30'), stay('FR', '2026-11-30', '2026-12-20')],
+        TODAY,
+      )
+
+      expect(status.planned).toMatchObject({ days: 201, until: '2026-11-30', resident: true })
     })
 
     it('count only up to December 31', () => {
       const status = russiaStatus([before, stay('RU', '2026-12-25', '2027-01-10')], TODAY)
 
-      expect(status.planned).toEqual({ allowance: 4, resident: false })
+      expect(status.planned).toEqual({ days: 178, until: '2026-12-31', allowance: 4, resident: false })
     })
   })
 })

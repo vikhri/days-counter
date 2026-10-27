@@ -5,6 +5,9 @@ import type { StayError, StayWarning } from '../domain/validation'
 const regionNames = new Intl.DisplayNames(['ru'], { type: 'region' })
 const fullDate = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 const shortDate = new Intl.DateTimeFormat('ru', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+const dayMonth = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+/** Короткие месяцы из дизайна: Intl даёт «февр.», «сент.», «нояб.» с точками. */
+const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
 const plural = new Intl.PluralRules('ru')
 const DAY_WORDS: Record<string, string> = { one: 'день', few: 'дня', many: 'дней', other: 'дня' }
 
@@ -16,6 +19,17 @@ export function countryName(code: CountryCode): string {
 
 export function formatDate(date: CalendarDate): string {
   return fullDate.format(asDate(date))
+}
+
+/** «30 ноября». */
+export function formatDayMonth(date: CalendarDate): string {
+  return dayMonth.format(asDate(date))
+}
+
+/** «31 авг» или «31 авг 2025». */
+export function formatShortDate(date: CalendarDate, withYear = false): string {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
+  return `${d} ${SHORT_MONTHS[m - 1]}${withYear ? ` ${y}` : ''}`
 }
 
 /** «3–10 мая 2026 г.»; для одного дня — просто дата. */
@@ -36,8 +50,13 @@ export function formatShortStayDates(stay: Stay): string {
   return stay.exit === stay.entry ? entry : `${entry} – ${shortDate.format(asDate(stay.exit))}`
 }
 
+/** «день», «дня» или «дней» — по числу. */
+export function dayWord(n: number): string {
+  return DAY_WORDS[plural.select(n)]!
+}
+
 export function formatDays(n: number): string {
-  return `${n} ${DAY_WORDS[plural.select(n)]}`
+  return `${n} ${dayWord(n)}`
 }
 
 /** Дней в пребывании, включая въезд и выезд; открытое — по сегодня. */

@@ -17,6 +17,35 @@ describe('countDays', () => {
     expect(result.unspecifiedDays).toBe(291)
   })
 
+  describe('longest gap', () => {
+    it('is the longest run of unspecified days in the period', () => {
+      const result = countDays([stay('FR', '2026-05-03', '2026-05-10')], { kind: 'currentYear' }, TODAY)
+
+      expect(result.longestGap).toEqual({ start: '2026-05-11', end: '2026-10-26' })
+    })
+
+    it('is the earlier run when two are equally long', () => {
+      const result = countDays([stay('FR', '2026-01-04', '2026-10-23')], { kind: 'currentYear' }, TODAY)
+
+      expect(result.longestGap).toEqual({ start: '2026-01-01', end: '2026-01-03' })
+    })
+
+    it('is a single day between two stays that do not meet', () => {
+      const stays = [stay('RU', '2026-01-01', '2026-05-01'), stay('FR', '2026-05-03', null)]
+
+      const result = countDays(stays, { kind: 'currentYear' }, TODAY)
+
+      expect(result.longestGap).toEqual({ start: '2026-05-02', end: '2026-05-02' })
+    })
+
+    it('is null when every day of the period is covered', () => {
+      const result = countDays([stay('RU', '2025-12-01', null)], { kind: 'currentYear' }, TODAY)
+
+      expect(result.unspecifiedDays).toBe(0)
+      expect(result.longestGap).toBeNull()
+    })
+  })
+
   it('counts a transit day in both countries, extends an open stay to today and sorts by days', () => {
     const stays = [
       stay('FR', '2026-03-01', '2026-03-05'),

@@ -9,6 +9,8 @@ import { countryName, stayErrorText, stayWarningText } from '../format'
 const props = defineProps<{
   /** Редактируемое пребывание; без него форма добавляет новое. */
   stay?: Stay
+  /** Даты, которыми заполнить новое пребывание. */
+  draft?: { entry: CalendarDate; exit: CalendarDate }
   stays: Stay[]
   today: CalendarDate
   submitLabel: string
@@ -19,8 +21,8 @@ const emit = defineEmits<{ submit: [input: StayInput]; cancel: [] }>()
 
 const listId = useId()
 const countryText = ref(props.stay ? countryName(props.stay.country) : '')
-const entry = ref(props.stay?.entry ?? '')
-const exit = ref(props.stay?.exit ?? '')
+const entry = ref(props.stay?.entry ?? props.draft?.entry ?? '')
+const exit = ref(props.stay?.exit ?? props.draft?.exit ?? '')
 const isOpen = ref(props.stay?.exit === null)
 
 const country = computed(() => findCountryByName(countryText.value))

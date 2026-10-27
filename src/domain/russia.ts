@@ -6,6 +6,10 @@ import type { CalendarDate, Stay } from './types'
 export const RESIDENCY_THRESHOLD = 183
 
 export interface PlannedAllowance {
+  /** Дни в России за год вместе с будущими. */
+  days: number
+  /** Последний будущий день в России в этом году — к нему наберутся `days`. */
+  until: CalendarDate
   allowance: number
   resident: boolean
 }
@@ -33,9 +37,11 @@ export function russiaStatus(stays: Stay[], today: CalendarDate): RussiaStatus {
   const days = countPresenceDays(inRussia, { start: `${year}-01-01`, end: today }, today)
   const daysLeftInYear = toDayNumber(`${year}-12-31`) - toDayNumber(today)
   const resident = days >= RESIDENCY_THRESHOLD
-  const plannedDays = daysLeftInYear
-    ? countPresenceDays(inRussia, { start: addDays(today, 1), end: `${year}-12-31` }, today)
-    : 0
+  const yearEnd = `${year}-12-31`
+  const plannedDays = daysLeftInYear ? countPresenceDays(inRussia, { start: addDays(today, 1), end: yearEnd }, today) : 0
+  const until = inRussia
+    .map((s) => s.exit ?? today)
+    .reduce((last, exit) => (exit > last ? exit : last), today)
 
   return {
     year,
@@ -44,7 +50,12 @@ export function russiaStatus(stays: Stay[], today: CalendarDate): RussiaStatus {
     resident,
     unreachable: !resident && days + daysLeftInYear < RESIDENCY_THRESHOLD,
     planned: plannedDays
-      ? { allowance: allowanceFor(days + plannedDays), resident: days + plannedDays >= RESIDENCY_THRESHOLD }
+      ? {
+          days: days + plannedDays,
+          until: until > yearEnd ? yearEnd : until,
+          allowance: allowanceFor(days + plannedDays),
+          resident: days + plannedDays >= RESIDENCY_THRESHOLD,
+        }
       : null,
   }
 }
