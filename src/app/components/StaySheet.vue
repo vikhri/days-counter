@@ -6,6 +6,7 @@ import type { StayInput } from '../api'
 import { COUNTRY_OPTIONS, type CountryOption } from '../countries'
 import { countryName, formatDays, formatShortDate, stayErrorText, stayLength, stayWarningText } from '../format'
 import CountryFlag from './CountryFlag.vue'
+import RangeCalendar from './RangeCalendar.vue'
 
 const props = defineProps<{
   /** Редактируемое пребывание; без него шторка добавляет новое. */
@@ -29,8 +30,35 @@ const country = ref<CountryCode | null>(props.stay?.country ?? null)
 const entry = ref(props.stay?.entry ?? props.draft?.entry ?? '')
 const exit = ref(props.stay?.exit ?? props.draft?.exit ?? '')
 const isOpen = ref(props.stay?.exit === null)
-/** Какой конец сейчас редактируется — его таблетка акцентная. */
+/** Какой конец выбирает следующий тап по календарю — его таблетка акцентная. */
 const activeDate = ref<'entry' | 'exit'>('entry')
+/** Конец выбран таблеткой: следующий тап меняет только его, второй конец остаётся. */
+let keepOther = false
+
+const others = computed(() => props.stays.filter((s) => s.id !== props.stay?.id))
+
+function editEnd(end: 'entry' | 'exit') {
+  activeDate.value = end
+  keepOther = true
+}
+
+/** Первый тап — въезд, второй — выезд; тап после готового диапазона начинает выбор заново. */
+function pickDate(date: CalendarDate) {
+  if (isOpen.value) {
+    entry.value = date
+  } else if (activeDate.value === 'entry') {
+    entry.value = date
+    if (!keepOther || (exit.value && exit.value < date)) exit.value = ''
+    activeDate.value = exit.value ? 'entry' : 'exit'
+  } else if (!entry.value || date < entry.value) {
+    entry.value = date
+    exit.value = ''
+  } else {
+    exit.value = date
+    activeDate.value = 'entry'
+  }
+  keepOther = false
+}
 
 const input = computed<StayInput | null>(() => {
   if (!country.value || !entry.value) return null
@@ -62,15 +90,6 @@ const note = computed(() => {
 
 function submit() {
   if (canSubmit.value && input.value) emit('submit', input.value)
-}
-
-/** В десктопном браузере клик по скрытому полю даты сам календарь не открывает. */
-function openPicker(event: Event) {
-  try {
-    ;(event.target as HTMLInputElement).showPicker?.()
-  } catch {
-    // showPicker недоступен — остаётся нативное поведение поля
-  }
 }
 
 // Выбор страны — второй экран той же шторки.
@@ -230,19 +249,15 @@ function onDragEnd() {
 
         <div class="row">
           <span class="label">Въезд</span>
-          <label
+          <button
+            type="button"
             class="pill"
             :class="{ active: activeDate === 'entry', empty: !entry }"
+            :aria-pressed="activeDate === 'entry'"
+            @click="editEnd('entry')"
           >
             {{ entry ? formatShortDate(entry, true) : 'Выбрать' }}
-            <input
-              v-model="entry"
-              type="date"
-              aria-label="Въезд"
-              @focus="activeDate = 'entry'"
-              @click="openPicker"
-            >
-          </label>
+          </button>
         </div>
 
         <div class="row">
@@ -251,20 +266,16 @@ function onDragEnd() {
             v-if="isOpen"
             class="pill static"
           >по сегодня</span>
-          <label
+          <button
             v-else
+            type="button"
             class="pill"
             :class="{ active: activeDate === 'exit', empty: !exit }"
+            :aria-pressed="activeDate === 'exit'"
+            @click="editEnd('exit')"
           >
             {{ exit ? formatShortDate(exit, true) : 'Выбрать' }}
-            <input
-              v-model="exit"
-              type="date"
-              aria-label="Выезд"
-              @focus="activeDate = 'exit'"
-              @click="openPicker"
-            >
-          </label>
+          </button>
         </div>
 
         <label class="row">
@@ -274,9 +285,20 @@ function onDragEnd() {
             type="checkbox"
             role="switch"
             class="switch"
+            @change="activeDate = 'entry'"
           >
         </label>
       </div>
+
+      <RangeCalendar
+        class="range-calendar"
+        :entry="entry"
+        :exit="exit"
+        :is-open="isOpen"
+        :others="others"
+        :today="today"
+        @pick="pickDate"
+      />
 
       <!-- Место под сводку зарезервировано, чтобы ничего не прыгало. -->
       <div
@@ -401,7 +423,7 @@ function onDragEnd() {
   inset: auto 0 0;
   width: 100%;
   max-width: 760px;
-  height: min(92dvh, 720px);
+  height: min(94dvh, 760px);
   max-height: none;
   margin: 0 auto;
   padding: 0;
@@ -487,6 +509,17 @@ function onDragEnd() {
   flex-direction: column;
   min-height: 0;
   padding: 8px 16px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Блоки не сжимаются: если не помещаются, тело шторки прокручивается. */
+.body > * {
+  flex: none;
+}
+
+.range-calendar {
+  margin-top: 8px;
 }
 
 .group {
@@ -550,9 +583,10 @@ function onDragEnd() {
 }
 
 .pill {
-  position: relative;
   flex: none;
+  min-height: 0;
   padding: 6px 12px;
+  border: none;
   border-radius: 8px;
   background: var(--fill);
   color: var(--text);
@@ -571,19 +605,6 @@ function onDragEnd() {
 
 .pill.static {
   color: var(--muted);
-}
-
-/* Нативное поле даты лежит прозрачным поверх таблетки: тап открывает системный выбор даты. */
-.pill input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  opacity: 0;
-  font-size: 16px;
-  cursor: pointer;
 }
 
 .switch {
@@ -629,8 +650,8 @@ function onDragEnd() {
 .summary {
   display: grid;
   gap: 2px;
-  min-height: 64px;
-  padding: 12px 4px 0;
+  min-height: 56px;
+  padding: 10px 4px 0;
 }
 
 .summary p {
@@ -669,14 +690,18 @@ function onDragEnd() {
   color: var(--danger);
 }
 
+/* На низком экране форма прокручивается, а кнопка остаётся внизу. */
 .actions {
+  position: sticky;
+  bottom: 0;
   margin-top: auto;
+  background: var(--sheet);
   padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
 }
 
 .delete {
   width: 100%;
-  min-height: 44px;
+  min-height: 40px;
   margin-top: 6px;
   border: none;
   background: transparent;
