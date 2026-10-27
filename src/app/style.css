@@ -21,6 +21,12 @@
   --country-ru: var(--accent);
   --country-fr: #8b5cf6;
   --country-es: #f08a24;
+  /* Остальные страны — не из дизайна, подобраны в тон. */
+  --country-other-1: #14a3a0;
+  --country-other-2: #e2579b;
+  --country-other-3: #7f9a2b;
+  --country-other-4: #b0773a;
+  --country-other-5: #6b7a90;
 
   /* Выбранный сегмент сегментированного контрола. */
   --segment: var(--surface);
