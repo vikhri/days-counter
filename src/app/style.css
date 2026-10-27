@@ -67,6 +67,16 @@ input:not([type='checkbox']) {
   color: var(--text);
 }
 
+/* Нативный date-инпут в iOS Safari держит собственную минимальную ширину и игнорирует width: 100%. */
+input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 input:disabled {
   opacity: 0.5;
 }
