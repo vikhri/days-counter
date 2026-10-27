@@ -51,6 +51,7 @@ async function remove(stay: Stay) {
 
 const isPlanned = (stay: Stay) => stay.entry > today || (stay.exit !== null && stay.exit > today)
 
+const filterOpen = ref(false)
 const filterCountry = ref('')
 const filterFrom = ref('')
 const filterTo = ref('')
@@ -102,35 +103,62 @@ function resetFilter() {
 
     <div
       v-if="stays.length"
+      class="filter-row"
+    >
+      <button
+        type="button"
+        class="icon-btn"
+        :class="{ active: hasFilter }"
+        :aria-expanded="filterOpen"
+        aria-controls="stays-filter"
+        aria-label="Фильтр"
+        title="Фильтр"
+        @click="filterOpen = !filterOpen"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M3 4h18l-7 8.5V19l-4 2v-8.5z" />
+        </svg>
+      </button>
+    </div>
+
+    <div
+      v-if="stays.length && filterOpen"
+      id="stays-filter"
       class="card filter"
     >
-      <select
-        v-model="filterCountry"
-        class="country-filter"
-        aria-label="Страна"
-      >
-        <option value="">
-          Все страны
-        </option>
-        <option
-          v-for="code in countryOptions"
-          :key="code"
-          :value="code"
-        >
-          {{ countryName(code) }}
-        </option>
-      </select>
+      <label class="field country-filter">
+        Страна
+        <select v-model="filterCountry">
+          <option value="">
+            Все страны
+          </option>
+          <option
+            v-for="code in countryOptions"
+            :key="code"
+            :value="code"
+          >
+            {{ countryName(code) }}
+          </option>
+        </select>
+      </label>
       <div class="dates">
-        <input
-          v-model="filterFrom"
-          type="date"
-          aria-label="Дата с"
-        >
-        <input
-          v-model="filterTo"
-          type="date"
-          aria-label="Дата по"
-        >
+        <label class="field">
+          С даты
+          <input
+            v-model="filterFrom"
+            type="date"
+          >
+        </label>
+        <label class="field">
+          По дату
+          <input
+            v-model="filterTo"
+            type="date"
+          >
+        </label>
       </div>
       <button
         v-if="hasFilter"
@@ -228,6 +256,44 @@ h2 {
   font-size: 1rem;
 }
 
+.filter-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -8px;
+}
+
+.icon-btn {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+}
+
+.icon-btn[aria-expanded='true'],
+.icon-btn.active {
+  color: var(--accent);
+}
+
+.icon-btn.active svg {
+  fill: currentColor;
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .filter {
   display: flex;
   flex-wrap: wrap;
@@ -235,8 +301,24 @@ h2 {
   align-items: end;
 }
 
+.field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  font-size: 1rem;
+}
+
 .country-filter {
   flex: 1 1 160px;
+  min-width: 0;
+}
+
+.country-filter select {
   min-width: 0;
   min-height: 40px;
   padding: 6px 10px;
