@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { accessKey } from './accessKey'
 import KeyGate from './components/KeyGate.vue'
 import { useData } from './store'
@@ -12,6 +13,37 @@ watch(
     if (key) reload()
   },
   { immediate: true },
+)
+
+// Тулбар прячется при прокрутке вниз и возвращается при прокрутке вверх.
+// Мелкие сдвиги копятся до порога, а «резинка» iOS за краями страницы
+// не считается прокруткой — иначе тулбар дёргается.
+const SCROLL_THRESHOLD = 8
+const toolbarHidden = ref(false)
+let lastScrollY = 0
+
+function onScroll() {
+  const y = window.scrollY
+  if (y <= 0) {
+    toolbarHidden.value = false
+    lastScrollY = 0
+    return
+  }
+  if (y > document.documentElement.scrollHeight - window.innerHeight) return
+  if (Math.abs(y - lastScrollY) < SCROLL_THRESHOLD) return
+  toolbarHidden.value = y > lastScrollY
+  lastScrollY = y
+}
+
+onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }))
+onUnmounted(() => window.removeEventListener('scroll', onScroll))
+
+const route = useRoute()
+watch(
+  () => route.path,
+  () => {
+    toolbarHidden.value = false
+  },
 )
 </script>
 
@@ -41,7 +73,10 @@ watch(
       </p>
       <RouterView v-else />
     </main>
-    <nav class="toolbar">
+    <nav
+      class="toolbar"
+      :class="{ hidden: toolbarHidden }"
+    >
       <RouterLink
         to="/"
         class="tab"
@@ -105,6 +140,18 @@ main {
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border);
   background: var(--surface);
+  transition: transform 0.2s ease;
+}
+
+/* С клавиатуры тулбар доступен всегда. */
+.toolbar.hidden:not(:focus-within) {
+  transform: translateY(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar {
+    transition: none;
+  }
 }
 
 .tab {
