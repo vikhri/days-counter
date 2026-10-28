@@ -275,8 +275,10 @@ function progress(stay: Stay) {
 </template>
 
 <style scoped>
+/* Колонка не шире экрана: иначе её распирает непереносимый текст — подпись страны в фильтре. */
 .stays {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -306,14 +308,14 @@ function progress(stay: Stay) {
   background: linear-gradient(var(--separator), var(--separator)) 64px 0 / calc(100% - 64px) 0.5px no-repeat;
 }
 
+/* Длинное название переносится, и строка растёт. */
 .row {
   display: flex;
   width: 100%;
-  height: 62px;
-  min-height: 0;
+  min-height: 62px;
   gap: 12px;
   align-items: center;
-  padding: 0;
+  padding: 10px 0;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -327,19 +329,26 @@ function progress(stay: Stay) {
   min-width: 0;
 }
 
+/* Бейдж, которому не хватило места рядом с названием, уходит на следующую строку. */
 .name {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   align-items: center;
   min-width: 0;
   font-size: 16px;
   font-weight: 500;
 }
 
+/* Не больше двух строк, дальше — многоточие. */
 .name-text {
+  display: -webkit-box;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .tag {
@@ -378,10 +387,12 @@ function progress(stay: Stay) {
 
 .right {
   display: grid;
+  flex: none;
   justify-items: end;
 }
 
 .days {
+  flex: none;
   font-family: var(--font-num);
   font-size: 17px;
   font-weight: 600;
