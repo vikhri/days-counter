@@ -1,29 +1,25 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { yearOf } from '../../domain/dates'
-import type { PeriodChoice } from '../../domain/periods'
+import { recentYears, type PeriodChoice } from '../../domain/periods'
 import type { CalendarDate } from '../../domain/types'
 
 const props = defineProps<{ today: CalendarDate }>()
 const model = defineModel<PeriodChoice>({ required: true })
 
-/** Годы в подписях — от сегодняшней даты. Произвольный период — узкий сегмент с иконкой. */
-const options = computed<{ kind: PeriodChoice['kind']; label: string }[]>(() => {
-  const year = yearOf(props.today)
-  return [
-    { kind: 'currentYear', label: String(year) },
-    { kind: 'last12Months', label: '12 мес' },
-    { kind: 'previousYear', label: String(year - 1) },
-    { kind: 'allTime', label: 'Всё' },
-  ]
-})
+/** Годы — от сегодняшней даты. Произвольный период — узкий сегмент с иконкой. */
+const years = computed(() => recentYears(props.today))
 
 const customStart = ref(model.value.kind === 'custom' ? model.value.start : `${yearOf(props.today)}-01-01`)
 const customEnd = ref(model.value.kind === 'custom' ? model.value.end : props.today)
 const customInvalid = computed(() => !customStart.value || !customEnd.value || customStart.value > customEnd.value)
 
-function select(kind: PeriodChoice['kind']) {
-  model.value = kind === 'custom' ? { kind, start: customStart.value, end: customEnd.value } : { kind }
+function selectYear(year: number) {
+  model.value = { kind: 'year', year }
+}
+
+function selectCustom() {
+  model.value = { kind: 'custom', start: customStart.value, end: customEnd.value }
 }
 
 /** В модель попадает только корректный произвольный период; пока даты неверны, остаётся прежний. */
@@ -40,14 +36,14 @@ watch([customStart, customEnd], ([start, end]) => {
       aria-label="Период"
     >
       <button
-        v-for="option in options"
-        :key="option.kind"
+        v-for="year in years"
+        :key="year"
         type="button"
         class="segment"
-        :aria-pressed="model.kind === option.kind"
-        @click="select(option.kind)"
+        :aria-pressed="model.kind === 'year' && model.year === year"
+        @click="selectYear(year)"
       >
-        {{ option.label }}
+        {{ year }}
       </button>
       <button
         type="button"
@@ -55,7 +51,7 @@ watch([customStart, customEnd], ([start, end]) => {
         :aria-pressed="model.kind === 'custom'"
         aria-label="Свой период"
         title="Свой период"
-        @click="select('custom')"
+        @click="selectCustom"
       >
         <svg
           viewBox="0 0 24 24"

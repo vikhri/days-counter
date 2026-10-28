@@ -50,27 +50,23 @@ describe('filterStays', () => {
   })
 
   it('combines country and dates', () => {
-    const found = filterStays(STAYS, { country: 'FR', dates: { kind: 'currentYear' } }, TODAY)
+    const found = filterStays(STAYS, { country: 'FR', dates: { kind: 'year', year: 2026 } }, TODAY)
 
     expect(ids(found)).toEqual(['FR-2026-03-01', 'FR-2026-12-01'])
   })
 
   it('takes a stay across the new year into both years', () => {
-    expect(ids(filterStays(STAYS, { country: 'ES', dates: { kind: 'previousYear' } }, TODAY))).toEqual(['ES-2025-12-20'])
-    expect(ids(filterStays(STAYS, { country: 'ES', dates: { kind: 'currentYear' } }, TODAY))).toContain('ES-2025-12-20')
+    expect(ids(filterStays(STAYS, { country: 'ES', dates: { kind: 'year', year: 2025 } }, TODAY))).toEqual(['ES-2025-12-20'])
+    expect(ids(filterStays(STAYS, { country: 'ES', dates: { kind: 'year', year: 2026 } }, TODAY))).toContain('ES-2025-12-20')
   })
 })
 
 describe('resolveDateFilter', () => {
-  it('takes the whole current year, planned stays included', () => {
-    expect(resolveDateFilter({ kind: 'currentYear' }, TODAY)).toEqual({ start: '2026-01-01', end: '2026-12-31' })
-  })
-
-  it('ends the last 12 months today', () => {
-    expect(resolveDateFilter({ kind: 'last12Months' }, TODAY)).toEqual({ start: '2025-10-27', end: '2026-10-26' })
+  it('takes a year whole, planned stays included', () => {
+    expect(resolveDateFilter({ kind: 'year', year: 2026 })).toEqual({ start: '2026-01-01', end: '2026-12-31' })
   })
 
   it('has no range for any dates', () => {
-    expect(resolveDateFilter({ kind: 'any' }, TODAY)).toBeNull()
+    expect(resolveDateFilter({ kind: 'any' })).toBeNull()
   })
 })

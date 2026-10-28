@@ -20,7 +20,7 @@ export interface DayCount {
 }
 
 export function countDays(stays: Stay[], period: PeriodChoice, today: CalendarDate): DayCount {
-  const range = resolvePeriod(period, today, stays)
+  const range = resolvePeriod(period, today)
   const from = toDayNumber(range.start)
   const to = toDayNumber(range.end)
   const todayNumber = toDayNumber(today)

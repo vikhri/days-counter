@@ -29,7 +29,7 @@ const LOW_ALLOWANCE = 30
 const { stays, settings, updateSettings } = useData()
 const today = localToday()
 
-const period = ref<PeriodChoice>({ kind: 'currentYear' })
+const period = ref<PeriodChoice>({ kind: 'year', year: yearOf(today) })
 const editing = ref(false)
 const settingsError = ref('')
 const openCountry = ref<string | null>(null)

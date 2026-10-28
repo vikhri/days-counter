@@ -1,34 +1,23 @@
-import { addDays, addMonths, yearOf } from './dates'
-import type { CalendarDate, DateRange, Stay } from './types'
+import { yearOf } from './dates'
+import type { CalendarDate, DateRange } from './types'
 
-export type PeriodChoice =
-  | { kind: 'currentYear' }
-  | { kind: 'last12Months' }
-  | { kind: 'previousYear' }
-  | { kind: 'allTime' }
-  | { kind: 'custom'; start: CalendarDate; end: CalendarDate }
+export type PeriodChoice = { kind: 'year'; year: number } | { kind: 'custom'; start: CalendarDate; end: CalendarDate }
 
-/** Последние 12 календарных месяцев по сегодня включительно. */
-export function last12Months(today: CalendarDate): DateRange {
-  return { start: addDays(addMonths(today, -12), 1), end: today }
+/** Годы на выбор: текущий и два прошлых, текущий первым. Остальное — через произвольный период. */
+export function recentYears(today: CalendarDate): number[] {
+  const year = yearOf(today)
+  return [year, year - 1, year - 2]
 }
 
 export function calendarYear(year: number): DateRange {
   return { start: `${year}-01-01`, end: `${year}-12-31` }
 }
 
-export function resolvePeriod(period: PeriodChoice, today: CalendarDate, stays: Stay[]): DateRange {
+/** Текущий год — по сегодня: будущие дни считаются только в произвольном периоде. */
+export function resolvePeriod(period: PeriodChoice, today: CalendarDate): DateRange {
   switch (period.kind) {
-    case 'currentYear':
-      return { start: `${yearOf(today)}-01-01`, end: today }
-    case 'last12Months':
-      return last12Months(today)
-    case 'previousYear':
-      return calendarYear(yearOf(today) - 1)
-    case 'allTime': {
-      const earliest = stays.reduce((min, s) => (s.entry < min ? s.entry : min), today)
-      return { start: earliest, end: today }
-    }
+    case 'year':
+      return period.year === yearOf(today) ? { start: `${period.year}-01-01`, end: today } : calendarYear(period.year)
     case 'custom':
       return { start: period.start, end: period.end }
   }

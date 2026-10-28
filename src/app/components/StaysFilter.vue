@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { yearOf } from '../../domain/dates'
+import { recentYears } from '../../domain/periods'
 import type { DateFilter } from '../../domain/stayFilter'
 import type { CalendarDate, CountryCode } from '../../domain/types'
 import { countryName, formatShortRange } from '../format'
@@ -24,18 +25,17 @@ const countryOptions = computed(() =>
   ),
 )
 
-type Preset = Exclude<DateFilter['kind'], 'custom'>
+type Preset = Exclude<DateFilter, { kind: 'custom' }>
 
-const presets = computed<{ kind: Preset; label: string; short: string }[]>(() => {
-  const year = String(yearOf(props.today))
-  const previous = String(yearOf(props.today) - 1)
-  return [
-    { kind: 'any', label: 'Любые даты', short: 'Любые даты' },
-    { kind: 'currentYear', label: year, short: year },
-    { kind: 'last12Months', label: 'Последние 12 месяцев', short: '12 месяцев' },
-    { kind: 'previousYear', label: previous, short: previous },
-  ]
-})
+const presets = computed<Preset[]>(() => [
+  { kind: 'any' },
+  ...recentYears(props.today).map((year) => ({ kind: 'year' as const, year })),
+])
+
+/** Подпись пресета — она же ключ: «Любые даты» или год. */
+function presetLabel(preset: Preset) {
+  return preset.kind === 'year' ? String(preset.year) : 'Любые даты'
+}
 
 /** «3 – 10 мая»; год — когда период не в текущем году. */
 function rangeLabel(start: CalendarDate, end: CalendarDate) {
@@ -44,8 +44,7 @@ function rangeLabel(start: CalendarDate, end: CalendarDate) {
 
 const datesLabel = computed(() => {
   const value = dates.value
-  if (value.kind === 'custom') return rangeLabel(value.start, value.end)
-  return presets.value.find((p) => p.kind === value.kind)?.short ?? ''
+  return value.kind === 'custom' ? rangeLabel(value.start, value.end) : presetLabel(value)
 })
 
 // Шторка выбора дат: пресет применяется сразу, свой период — календарём и кнопкой «Показать».
@@ -63,8 +62,8 @@ function openDates() {
   datesOpen.value = true
 }
 
-function pickPreset(kind: Preset) {
-  dates.value = { kind }
+function pickPreset(preset: Preset) {
+  dates.value = preset
   sheet.value?.close()
 }
 
@@ -169,13 +168,13 @@ function applyCustom() {
         <div class="group">
           <button
             v-for="preset in presets"
-            :key="preset.kind"
+            :key="presetLabel(preset)"
             type="button"
             class="row"
-            :aria-pressed="!picking && dates.kind === preset.kind"
-            @click="pickPreset(preset.kind)"
+            :aria-pressed="!picking && dates.kind !== 'custom' && presetLabel(dates) === presetLabel(preset)"
+            @click="pickPreset(preset)"
           >
-            {{ preset.label }}
+            {{ presetLabel(preset) }}
             <span
               class="check"
               aria-hidden="true"
