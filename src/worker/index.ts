@@ -69,7 +69,7 @@ app.delete('/stays/:id', async (c) => {
 })
 
 /** Видимость карточек дашборда; список стран виден всегда. */
-const CARD_DEFAULTS = { showSchengen: false, showRussia: true }
+const CARD_DEFAULTS = { showSchengen: false, showRussia: true, showUnspecified: true }
 type Settings = typeof CARD_DEFAULTS
 const SETTING_KEYS = Object.keys(CARD_DEFAULTS) as (keyof Settings)[]
 

@@ -229,12 +229,12 @@ async function setVisible(key: keyof Settings, event: Event) {
           </svg>
           {{ planLine.text }}
         </p>
-        <p class="footnote muted">
-          Выезды на лечение и обучение не учтены.
-        </p>
       </div>
 
-      <div class="tiles">
+      <div
+        v-if="settings.showSchengen || settings.showUnspecified || editing"
+        class="tiles"
+      >
         <div
           v-if="settings.showSchengen || editing"
           :class="['card', 'tile', { hidden: !settings.showSchengen }]"
@@ -277,8 +277,22 @@ async function setVisible(key: keyof Settings, event: Event) {
           </p>
         </div>
 
-        <div class="card tile">
+        <div
+          v-if="settings.showUnspecified || editing"
+          :class="['card', 'tile', { hidden: !settings.showUnspecified }]"
+        >
           <h2>Не указано</h2>
+          <label
+            v-if="editing"
+            class="toggle"
+          >
+            <input
+              type="checkbox"
+              :checked="settings.showUnspecified"
+              @change="setVisible('showUnspecified', $event)"
+            >
+            Показывать
+          </label>
           <p class="mid">
             {{ count.unspecifiedDays }} <span class="of">{{ dayWord(count.unspecifiedDays) }}</span>
           </p>
@@ -560,7 +574,7 @@ h2 {
   padding: 14px;
 }
 
-/* Шенген скрыт — плитка «Не указано» одна и занимает весь ряд. */
+/* Вторая плитка скрыта — оставшаяся одна и занимает весь ряд. */
 .tile:only-child {
   grid-column: 1 / -1;
 }
@@ -604,11 +618,6 @@ h2 {
 
 .bar.over .bar-fill {
   background: var(--danger);
-}
-
-.footnote {
-  margin-top: 10px !important;
-  font-size: 12px;
 }
 
 .period {

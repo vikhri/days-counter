@@ -3,7 +3,7 @@ import type { Stay } from '../domain/types'
 import { api, type Settings, type StayInput } from './api'
 
 const stays = ref<Stay[]>([])
-const settings = ref<Settings>({ showSchengen: false, showRussia: true })
+const settings = ref<Settings>({ showSchengen: false, showRussia: true, showUnspecified: true })
 const loaded = ref(false)
 const loadError = ref('')
 

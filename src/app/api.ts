@@ -9,6 +9,7 @@ export type StayInput = Omit<Stay, 'id'>
 export interface Settings {
   showSchengen: boolean
   showRussia: boolean
+  showUnspecified: boolean
 }
 
 export class ValidationFailed extends Error {

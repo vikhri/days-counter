@@ -4,30 +4,38 @@ defineProps<{ title: string }>()
 
 <template>
   <header class="screen-header">
-    <!-- Строка под кнопку держит высоту и без кнопки, чтобы заголовок не прыгал. -->
+    <h1>{{ title }}</h1>
     <div class="actions">
       <slot />
     </div>
-    <h1>{{ title }}</h1>
   </header>
 </template>
 
 <style scoped>
+/* Заголовок и кнопки в одной строке; кнопка ниже заголовка, поэтому без неё строка не меняет высоту. */
+.screen-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .actions {
   display: flex;
-  justify-content: flex-end;
-  min-height: 36px;
+  flex: none;
+  gap: 8px;
 }
 
 h1 {
-  margin: 4px 0 0;
+  min-width: 0;
+  margin: 0;
   font-size: 34px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 41px;
 }
 
-/* Круглая кнопка 36 px в шапке. Акцентная — с классом accent. */
+/* Круглая кнопка 36 px в шапке, приглушённая. Акцентная — с классом accent или нажатая. */
 .actions :slotted(button) {
   display: flex;
   width: 36px;
@@ -38,8 +46,8 @@ h1 {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--fill);
+  color: var(--muted);
 }
 
 .actions :slotted(button[aria-pressed='true']),
