@@ -6,12 +6,11 @@ import type { CalendarDate, CountryCode, Stay } from '../../domain/types'
 import { countryColor } from '../countryColors'
 import { countryName, formatDays } from '../format'
 
-const props = defineProps<{ stays: Stay[]; today: CalendarDate }>()
+const props = defineProps<{ stays: Stay[]; year: number; today: CalendarDate }>()
 
 const MONTH_LETTERS = ['Я', 'Ф', 'М', 'А', 'М', 'И', 'И', 'А', 'С', 'О', 'Н', 'Д']
 
-const year = computed(() => yearOf(props.today))
-const segments = computed(() => yearTimeline(props.stays, year.value, props.today))
+const segments = computed(() => yearTimeline(props.stays, props.year, props.today))
 const yearDays = computed(() => segments.value.reduce((sum, s) => sum + s.days, 0))
 const share = (days: number) => `${(days / yearDays.value) * 100}%`
 
@@ -29,17 +28,18 @@ const bars = computed(() => {
   })
 })
 
-/** Черта стоит посередине сегодняшнего дня; подпись у краёв года не вылезает за карточку. */
+/** Черта стоит посередине сегодняшнего дня; подпись у краёв года не вылезает за карточку. Год не текущий — черты нет. */
 const todayPosition = computed(() => {
-  const offset = toDayNumber(props.today) - toDayNumber(`${year.value}-01-01`) + 0.5
+  if (yearOf(props.today) !== props.year) return null
+  const offset = toDayNumber(props.today) - toDayNumber(`${props.year}-01-01`) + 0.5
   const fraction = offset / yearDays.value
   return { left: share(offset), align: fraction < 0.08 ? 'start' : fraction > 0.92 ? 'end' : 'center' }
 })
 
 const months = computed(() =>
   MONTH_LETTERS.map((letter, i) => {
-    const start = toDayNumber(`${year.value}-${String(i + 1).padStart(2, '0')}-01`)
-    const next = i === 11 ? toDayNumber(`${year.value + 1}-01-01`) : toDayNumber(`${year.value}-${String(i + 2).padStart(2, '0')}-01`)
+    const start = toDayNumber(`${props.year}-${String(i + 1).padStart(2, '0')}-01`)
+    const next = i === 11 ? toDayNumber(`${props.year + 1}-01-01`) : toDayNumber(`${props.year}-${String(i + 2).padStart(2, '0')}-01`)
     return { key: i, letter, days: next - start }
   }),
 )
@@ -72,6 +72,7 @@ const summary = computed(() =>
 
     <div class="timeline">
       <span
+        v-if="todayPosition"
         class="today-label"
         :class="todayPosition.align"
         :style="{ left: todayPosition.left }"
@@ -91,6 +92,7 @@ const summary = computed(() =>
         />
       </div>
       <span
+        v-if="todayPosition"
         class="today-line"
         :style="{ left: todayPosition.left }"
         aria-hidden="true"

@@ -35,6 +35,8 @@ const settingsError = ref('')
 const openCountry = ref<string | null>(null)
 
 const count = computed(() => countDays(stays.value, period.value, today))
+/** Полоса года — выбранный год; при своём периоде — год, в котором он кончается. */
+const barYear = computed(() => (period.value.kind === 'year' ? period.value.year : yearOf(period.value.end)))
 const periodDays = computed(() => toDayNumber(count.value.range.end) - toDayNumber(count.value.range.start) + 1)
 
 function toggleCountry(code: string) {
@@ -311,6 +313,7 @@ async function setVisible(key: keyof Settings, event: Event) {
 
       <YearBar
         :stays="stays"
+        :year="barYear"
         :today="today"
       />
 
