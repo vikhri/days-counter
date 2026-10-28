@@ -305,9 +305,13 @@ function applyCustom() {
   appearance: none;
 }
 
+/*
+ * Шторка по содержимому, поэтому тело — от своей высоты, а не flex: 1: основа 0 в колонке без высоты
+ * Safari сжимает до нуля, и в шторке остаётся одна шапка. Сжимается тело только у потолка шторки — тогда прокручивается.
+ */
 .body {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
   flex-direction: column;
   min-height: 0;
   padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
