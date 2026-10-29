@@ -3,6 +3,8 @@ import type { CalendarDate, CountryCode, DateRange, Stay } from '../domain/types
 import type { StayError, StayWarning } from '../domain/validation'
 
 const regionNames = new Intl.DisplayNames(['ru'], { type: 'region' })
+/** Где Intl даёт громоздкое имя: для CN это «Китай континентальный». */
+const NAME_OVERRIDES: Partial<Record<CountryCode, string>> = { CN: 'Китай' }
 const fullDate = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 const dayMonth = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', timeZone: 'UTC' })
 /** Короткие месяцы из дизайна: Intl даёт «февр.», «сент.», «нояб.» с точками. */
@@ -14,7 +16,7 @@ const VISIT_WORDS: Record<string, string> = { one: 'визит', few: 'визи�
 const asDate = (date: CalendarDate) => new Date(`${date}T00:00:00Z`)
 
 export function countryName(code: CountryCode): string {
-  return regionNames.of(code) ?? code
+  return NAME_OVERRIDES[code] ?? regionNames.of(code) ?? code
 }
 
 export function formatDate(date: CalendarDate): string {
